@@ -1,0 +1,10 @@
+{
+  "name": "heidrun",
+  "version": "0.0.1",
+  "type": "module",
+  "license": "MIT",
+  "description": "Prototype test environment for Heiðrún — no build step, plain ES modules.",
+  "scripts": {
+    "test": "node --test"
+  }
+}

@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tvísynth — Sheep Plinko (dev)</title>
+<style>
+  :root {
+    --bg: #07080d;
+    --panel-bg: #0e1018;
+    --border: #232744;
+    --border-bright: #3a4180;
+    --text: #dbe4ff;
+    --text-dim: #6d7699;
+    --accent: #00f0ff;
+    --accent-dim: #0891a3;
+    --accent2: #ff2fd0;
+    --glow: 0 0 8px rgba(0, 240, 255, 0.55);
+    --glow2: 0 0 8px rgba(255, 47, 208, 0.5);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #000;
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  #stageWrap {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: #000;
+  }
+  #stage {
+    position: relative;
+    width: 1920px; height: 1080px;
+    flex: none;
+    transform-origin: center center;
+    background: #050608;
+  }
+  #stage canvas { position: absolute; top: 0; left: 0; }
+
+  button {
+    background: #14172a;
+    border: 1px solid var(--border-bright);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 500;
+    transition: all 0.15s ease;
+  }
+  button:hover { background: #1c2040; border-color: var(--accent); box-shadow: var(--glow); }
+  button.toggle-btn.active { border-color: var(--accent2); color: var(--accent2); text-shadow: var(--glow2); box-shadow: var(--glow2); }
+  button.danger:hover { border-color: #ff3b6b; box-shadow: 0 0 8px rgba(255,59,107,0.5); }
+
+  #devToggle {
+    position: fixed; top: 12px; left: 12px; z-index: 10;
+  }
+
+  #drawer {
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: 340px;
+    background: rgba(14, 16, 24, 0.97);
+    border-right: 1px solid var(--border-bright);
+    box-shadow: 8px 0 24px rgba(0,0,0,0.5);
+    padding: 16px 18px 24px;
+    overflow-y: auto;
+    display: none;
+    flex-direction: column;
+    gap: 14px;
+    z-index: 9;
+    backdrop-filter: blur(6px);
+  }
+  #drawer.open { display: flex; }
+  #drawer h2 {
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--accent); text-shadow: var(--glow); margin-bottom: 2px;
+  }
+  .field { display: flex; flex-direction: column; gap: 3px; }
+  .field label { font-size: 0.7rem; color: var(--text-dim); display: flex; justify-content: space-between; }
+  .field .v { color: var(--accent2); font-variant-numeric: tabular-nums; }
+  input[type=range] {
+    -webkit-appearance: none; width: 100%; height: 3px; background: var(--border-bright); border-radius: 2px; outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%;
+    background: var(--accent); box-shadow: var(--glow); cursor: pointer; margin-top: -4.5px;
+  }
+  #readout, #hitboxReadout {
+    font-family: ui-monospace, "SF Mono", monospace; font-size: 0.68rem; color: var(--text-dim);
+    background: #05060a; border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px; white-space: pre; overflow-x: auto;
+  }
+  #log {
+    font-family: ui-monospace, monospace; font-size: 0.68rem; color: var(--text-dim);
+    background: #05060a; border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px; max-height: 120px; overflow-y: auto; white-space: pre-wrap;
+  }
+  .row { display: flex; gap: 6px; }
+  .row button { flex: 1; }
+  .hint { font-size: 0.68rem; color: var(--text-dim); line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div id="stageWrap">
+  <div id="stage">
+    <canvas id="bgCanvas"></canvas>
+    <canvas id="fxCanvas"></canvas>
+  </div>
+</div>
+
+<button id="devToggle" class="toggle-btn">dev</button>
+
+<div id="drawer">
+  <h2>Sheep Plinko — dev</h2>
+  <p class="hint">Drag the cyan handles on stage to set spawn line, landing line,
+  and the peg-box bounds. Sheep/button horizontal spread and side walls follow
+  the peg box automatically.</p>
+
+  <div class="row">
+    <button id="btnSpawn">🐑 Spawn sheep</button>
+    <button id="btnClear" class="danger">Clear sheep</button>
+  </div>
+
+  <h2>Sheep hitbox</h2>
+  <p class="hint">Isolates the sprite so you can drag the 6 points onto its
+  outline — two for the head, two for the shoulders/body, two for the feet.
+  Order matters (goes around the shape); keep it convex.</p>
+  <div class="row">
+    <button id="hitboxToggle" class="toggle-btn">Edit hitbox</button>
+    <button id="btnHitboxReset">Reset</button>
+  </div>
+  <div id="hitboxReadout"></div>
+  <button id="btnCopyHitbox">⧉ Copy hitbox JSON</button>
+
+  <h2>Sprite sizes</h2>
+  <div class="field">
+    <label>Peg radius <span class="v" id="vPegR">8</span></label>
+    <input type="range" id="pegR" min="3" max="30" value="8">
+  </div>
+  <div class="field">
+    <label>Sheep radius <span class="v" id="vSheepR">18</span></label>
+    <input type="range" id="sheepR" min="6" max="50" value="18">
+  </div>
+  <div class="field">
+    <label>Button radius <span class="v" id="vBtnR">40</span></label>
+    <input type="range" id="btnR" min="10" max="80" value="40">
+  </div>
+
+  <h2>Peg field</h2>
+  <div class="field">
+    <label>Spacing <span class="v" id="vSpacing">70</span></label>
+    <input type="range" id="spacing" min="20" max="160" value="70">
+  </div>
+
+  <h2>Physics</h2>
+  <div class="field">
+    <label>Gravity <span class="v" id="vGrav">1.2</span></label>
+    <input type="range" id="gravity" min="0.1" max="3" step="0.05" value="1.2">
+  </div>
+  <div class="field">
+    <label>Restitution (bounciness) <span class="v" id="vRest">0.6</span></label>
+    <input type="range" id="restitution" min="0" max="1.2" step="0.02" value="0.6">
+  </div>
+  <div class="field">
+    <label>Friction <span class="v" id="vFric">0.05</span></label>
+    <input type="range" id="friction" min="0" max="0.5" step="0.01" value="0.05">
+  </div>
+  <div class="field">
+    <label>Air friction <span class="v" id="vAirFric">0.001</span></label>
+    <input type="range" id="airFriction" min="0" max="0.02" step="0.001" value="0.001">
+  </div>
+
+  <h2>Readout</h2>
+  <div id="readout"></div>
+  <button id="btnCopy">⧉ Copy settings JSON</button>
+
+  <h2>Log</h2>
+  <div id="log"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
+<script>
+/* ── config — the numbers this whole file exists to pin down ────────────── */
+const cfg = {
+  spawnY: 58,
+  landingY: 940,
+  pegBoxLeft: 1141,
+  pegBoxRight: 1909,
+  pegBoxTop: 122,
+  pegBoxBottom: 860,
+  spacing: 138,
+  pegRadius: 8,
+  sheepRadius: 38,
+  buttonRadius: 52,
+  gravity: 0.5,
+  restitution: 0.9,
+  friction: 0.05,
+  airFriction: 0.001,
+  // Normalized hitbox vertices (fraction of sprite diameter, origin at sprite
+  // center), in order around the shape: head-L, head-R, shoulder-R, foot-R,
+  // foot-L, shoulder-L. Must stay convex — Matter.Bodies.fromVertices skips
+  // decomposition (no poly-decomp dependency needed) only while it is.
+  sheepHitbox: [
+[
+      -0.20076357490206664,
+      -0.4150924989264878
+    ],
+    [
+      0.19895511383891815,
+      -0.4150924989264878
+    ],
+    [
+      0.39429275358564375,
+      0.017182420687660203
+    ],
+    [
+      0.18991170459138473,
+      0.40062293515711345
+    ],
+    [
+      -0.1844854382565062,
+      0.3988142534850878
+    ],
+    [
+      -0.3961012146487922,
+      -0.0027130777046227906
+    ],
+  ],
+};
+const DEFAULT_SHEEP_HITBOX = cfg.sheepHitbox.map(p => p.slice());
+const NUM_BUTTONS = 5; // Layer 1 top row — see 03_singershuff.md §3
+
+const MIN_GAP = 40; // minimum spacing between opposing bounds while dragging
+
+/* ── stage scaling — fixed 1920x1080 logical space, scaled to fit window ── */
+const stage = document.getElementById('stage');
+const bgCanvas = document.getElementById('bgCanvas');
+const fxCanvas = document.getElementById('fxCanvas');
+[bgCanvas, fxCanvas].forEach(c => { c.width = 1920; c.height = 1080; });
+const bgCtx = bgCanvas.getContext('2d');
+const fxCtx = fxCanvas.getContext('2d');
+
+function fitStage() {
+  const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+  stage.style.transform = `scale(${scale})`;
+}
+window.addEventListener('resize', fitStage);
+fitStage();
+
+function clientToStage(clientX, clientY) {
+  const rect = stage.getBoundingClientRect();
+  return {
+    x: (clientX - rect.left) * (1920 / rect.width),
+    y: (clientY - rect.top) * (1080 / rect.height),
+  };
+}
+
+/* ── background ───────────────────────────────────────────────────────── */
+const bgImg = new Image();
+let bgLoaded = false;
+bgImg.onload = () => { bgLoaded = true; drawBackground(); };
+bgImg.src = 'src/img/background.png';
+function drawBackground() {
+  bgCtx.clearRect(0, 0, 1920, 1080);
+  bgCtx.fillStyle = '#0a0c14';
+  bgCtx.fillRect(0, 0, 1920, 1080);
+  if (bgLoaded) {
+    // cover-fit
+    const scale = Math.max(1920 / bgImg.width, 1080 / bgImg.height);
+    const w = bgImg.width * scale, h = bgImg.height * scale;
+    bgCtx.drawImage(bgImg, (1920 - w) / 2, (1080 - h) / 2, w, h);
+  }
+}
+
+const sheepImg = new Image();
+let sheepImgLoaded = false;
+sheepImg.onload = () => { sheepImgLoaded = true; };
+sheepImg.src = 'src/img/sheep.png';
+
+/* ── matter.js world ──────────────────────────────────────────────────── */
+const { Engine, World, Bodies, Body, Runner } = Matter;
+const engine = Engine.create();
+engine.gravity.y = cfg.gravity;
+const world = engine.world;
+
+let pegBodies = [];
+let wallBodies = [];
+let sheepBodies = [];
+
+function clampBounds() {
+  cfg.pegBoxLeft = Math.min(cfg.pegBoxLeft, cfg.pegBoxRight - MIN_GAP);
+  cfg.pegBoxRight = Math.max(cfg.pegBoxRight, cfg.pegBoxLeft + MIN_GAP);
+  cfg.pegBoxTop = Math.min(cfg.pegBoxTop, cfg.pegBoxBottom - MIN_GAP);
+  cfg.pegBoxBottom = Math.max(cfg.pegBoxBottom, cfg.pegBoxTop + MIN_GAP);
+  cfg.spawnY = Math.min(cfg.spawnY, cfg.pegBoxTop - 10);
+  cfg.landingY = Math.max(cfg.landingY, cfg.pegBoxBottom + 10);
+  cfg.pegBoxLeft = Math.max(0, cfg.pegBoxLeft);
+  cfg.pegBoxRight = Math.min(1920, cfg.pegBoxRight);
+  cfg.spawnY = Math.max(20, cfg.spawnY);
+  cfg.landingY = Math.min(1060, cfg.landingY);
+}
+
+function buttonX(i) {
+  const w = cfg.pegBoxRight - cfg.pegBoxLeft;
+  return cfg.pegBoxLeft + (i + 0.5) * (w / NUM_BUTTONS);
+}
+
+function rebuildPegs() {
+  World.remove(world, pegBodies);
+  pegBodies = [];
+  const spacing = cfg.spacing;
+  const rowH = spacing * Math.sqrt(3) / 2;
+  let row = 0;
+  for (let y = cfg.pegBoxTop; y <= cfg.pegBoxBottom; y += rowH) {
+    const offset = (row % 2 === 0) ? 0 : spacing / 2;
+    for (let x = cfg.pegBoxLeft + offset; x <= cfg.pegBoxRight; x += spacing) {
+      const peg = Bodies.circle(x, y, cfg.pegRadius, {
+        isStatic: true,
+        restitution: cfg.restitution,
+        friction: cfg.friction,
+        render: { visible: false },
+      });
+      pegBodies.push(peg);
+    }
+    row++;
+  }
+  World.add(world, pegBodies);
+}
+
+function rebuildWalls() {
+  World.remove(world, wallBodies);
+  wallBodies = [];
+  const thickness = 20;
+  const top = cfg.spawnY - 40;
+  const bottom = cfg.landingY + 40;
+  const h = bottom - top;
+  const left = Bodies.rectangle(cfg.pegBoxLeft - thickness / 2, top + h / 2, thickness, h, {
+    isStatic: true, restitution: 0.4, friction: 0,
+  });
+  const right = Bodies.rectangle(cfg.pegBoxRight + thickness / 2, top + h / 2, thickness, h, {
+    isStatic: true, restitution: 0.4, friction: 0,
+  });
+  wallBodies = [left, right];
+  World.add(world, wallBodies);
+}
+
+function rebuildAll() {
+  clampBounds();
+  rebuildPegs();
+  rebuildWalls();
+  syncSliders();
+  updateReadout();
+}
+
+/* ── sheep ────────────────────────────────────────────────────────────── */
+function spawnSheep() {
+  const r = cfg.sheepRadius;
+  const d = r * 2;
+  const x = cfg.pegBoxLeft + r + Math.random() * (cfg.pegBoxRight - cfg.pegBoxLeft - 2 * r);
+  const verts = cfg.sheepHitbox.map(([nx, ny]) => ({ x: nx * d, y: ny * d }));
+  const body = Bodies.fromVertices(x, cfg.spawnY, [verts], {
+    restitution: cfg.restitution,
+    friction: cfg.friction,
+    frictionAir: cfg.airFriction,
+    density: 0.002,
+  }, true);
+  body.plugin = { landed: false };
+  sheepBodies.push(body);
+  World.add(world, body);
+}
+
+function clearSheep() {
+  World.remove(world, sheepBodies);
+  sheepBodies = [];
+}
+
+function checkLanding() {
+  sheepBodies.forEach(b => {
+    if (b.plugin.landed) return;
+    if (b.position.y >= cfg.landingY) {
+      b.plugin.landed = true;
+      let hit = -1;
+      for (let i = 0; i < NUM_BUTTONS; i++) {
+        if (Math.abs(b.position.x - buttonX(i)) <= cfg.buttonRadius) { hit = i; break; }
+      }
+      if (hit >= 0) {
+        log(`sheep -> button ${hit + 1}`);
+        flashButton(hit);
+      } else {
+        log('sheep missed all buttons');
+      }
+      setTimeout(() => {
+        World.remove(world, b);
+        sheepBodies = sheepBodies.filter(s => s !== b);
+      }, 250);
+    }
+  });
+}
+
+let flashUntil = [0, 0, 0, 0, 0];
+function flashButton(i) { flashUntil[i] = performance.now() + 300; }
+
+/* ── drag handles ─────────────────────────────────────────────────────── */
+// Each handle reads/writes one cfg field, constrained to one axis.
+const HANDLE_R = 10;
+function midX() { return (cfg.pegBoxLeft + cfg.pegBoxRight) / 2; }
+function midY() { return (cfg.pegBoxTop + cfg.pegBoxBottom) / 2; }
+
+const handles = [
+  { key: 'spawnY', axis: 'y', get: () => ({ x: midX(), y: cfg.spawnY }), set: (v) => { cfg.spawnY = v; } },
+  { key: 'landingY', axis: 'y', get: () => ({ x: midX(), y: cfg.landingY }), set: (v) => { cfg.landingY = v; } },
+  { key: 'pegBoxTop', axis: 'y', get: () => ({ x: midX(), y: cfg.pegBoxTop }), set: (v) => { cfg.pegBoxTop = v; } },
+  { key: 'pegBoxBottom', axis: 'y', get: () => ({ x: midX(), y: cfg.pegBoxBottom }), set: (v) => { cfg.pegBoxBottom = v; } },
+  { key: 'pegBoxLeft', axis: 'x', get: () => ({ x: cfg.pegBoxLeft, y: midY() }), set: (v) => { cfg.pegBoxLeft = v; } },
+  { key: 'pegBoxRight', axis: 'x', get: () => ({ x: cfg.pegBoxRight, y: midY() }), set: (v) => { cfg.pegBoxRight = v; } },
+];
+
+let devOpen = false;
+let dragging = null;
+let hoverKey = null;
+
+// ── sheep hitbox tuner — isolates the sprite full-screen so the 6 points can
+// be dragged directly onto its outline without the plinko field in the way.
+let hitboxMode = false;
+let hitboxDragIndex = null;
+let hitboxHoverIndex = null;
+const HITBOX_CX = 960, HITBOX_CY = 540, HITBOX_DISP = 640;
+
+fxCanvas.addEventListener('mousedown', (e) => {
+  if (!devOpen) return;
+  const p = clientToStage(e.clientX, e.clientY);
+  if (hitboxMode) {
+    for (let i = 0; i < cfg.sheepHitbox.length; i++) {
+      const [nx, ny] = cfg.sheepHitbox[i];
+      const x = HITBOX_CX + nx * HITBOX_DISP, y = HITBOX_CY + ny * HITBOX_DISP;
+      if (Math.hypot(p.x - x, p.y - y) <= HANDLE_R + 6) { hitboxDragIndex = i; return; }
+    }
+    return;
+  }
+  for (const h of handles) {
+    const pos = h.get();
+    if (Math.hypot(p.x - pos.x, p.y - pos.y) <= HANDLE_R + 6) { dragging = h; return; }
+  }
+});
+window.addEventListener('mousemove', (e) => {
+  if (!devOpen) return;
+  const p = clientToStage(e.clientX, e.clientY);
+  if (hitboxMode) {
+    if (hitboxDragIndex != null) {
+      cfg.sheepHitbox[hitboxDragIndex] = [(p.x - HITBOX_CX) / HITBOX_DISP, (p.y - HITBOX_CY) / HITBOX_DISP];
+      updateHitboxReadout();
+      updateReadout();
+      return;
+    }
+    hitboxHoverIndex = null;
+    for (let i = 0; i < cfg.sheepHitbox.length; i++) {
+      const [nx, ny] = cfg.sheepHitbox[i];
+      const x = HITBOX_CX + nx * HITBOX_DISP, y = HITBOX_CY + ny * HITBOX_DISP;
+      if (Math.hypot(p.x - x, p.y - y) <= HANDLE_R + 6) { hitboxHoverIndex = i; break; }
+    }
+    return;
+  }
+  if (dragging) {
+    dragging.set(dragging.axis === 'y' ? p.y : p.x);
+    clampBounds();
+    if (dragging.key.startsWith('pegBox')) { rebuildPegs(); rebuildWalls(); }
+    else { rebuildWalls(); }
+    syncSliders();
+    updateReadout();
+    return;
+  }
+  hoverKey = null;
+  for (const h of handles) {
+    const pos = h.get();
+    if (Math.hypot(p.x - pos.x, p.y - pos.y) <= HANDLE_R + 6) { hoverKey = h.key; break; }
+  }
+});
+window.addEventListener('mouseup', () => { dragging = null; hitboxDragIndex = null; });
+
+/* ── sheep hitbox tuner rendering ─────────────────────────────────────── */
+function drawHitboxTuner() {
+  bgCtx.clearRect(0, 0, 1920, 1080);
+  bgCtx.fillStyle = '#05060a';
+  bgCtx.fillRect(0, 0, 1920, 1080);
+  fxCtx.clearRect(0, 0, 1920, 1080);
+
+  if (sheepImgLoaded) {
+    fxCtx.drawImage(sheepImg, HITBOX_CX - HITBOX_DISP / 2, HITBOX_CY - HITBOX_DISP / 2, HITBOX_DISP, HITBOX_DISP);
+  }
+
+  fxCtx.beginPath();
+  cfg.sheepHitbox.forEach(([nx, ny], i) => {
+    const x = HITBOX_CX + nx * HITBOX_DISP, y = HITBOX_CY + ny * HITBOX_DISP;
+    if (i === 0) fxCtx.moveTo(x, y); else fxCtx.lineTo(x, y);
+  });
+  fxCtx.closePath();
+  fxCtx.fillStyle = 'rgba(0,240,255,0.12)';
+  fxCtx.strokeStyle = 'rgba(0,240,255,0.7)';
+  fxCtx.lineWidth = 2;
+  fxCtx.fill();
+  fxCtx.stroke();
+
+  const labels = ['head-L', 'head-R', 'shoulder-R', 'foot-R', 'foot-L', 'shoulder-L'];
+  cfg.sheepHitbox.forEach(([nx, ny], i) => {
+    const x = HITBOX_CX + nx * HITBOX_DISP, y = HITBOX_CY + ny * HITBOX_DISP;
+    const isHot = hitboxDragIndex === i || hitboxHoverIndex === i;
+    fxCtx.beginPath();
+    fxCtx.arc(x, y, HANDLE_R, 0, Math.PI * 2);
+    fxCtx.fillStyle = isHot ? '#ff2fd0' : '#00f0ff';
+    fxCtx.fill();
+    fxCtx.strokeStyle = '#05060a';
+    fxCtx.lineWidth = 2;
+    fxCtx.stroke();
+    fxCtx.fillStyle = '#6d7699';
+    fxCtx.font = '11px ui-monospace, monospace';
+    fxCtx.textAlign = 'center';
+    fxCtx.fillText(labels[i], x, y - 16);
+  });
+  fxCtx.textAlign = 'left';
+
+  fxCtx.fillStyle = '#dbe4ff';
+  fxCtx.font = '16px ui-monospace, monospace';
+  fxCtx.fillText('Drag the 6 points onto the sheep outline — head, shoulders, feet.', HITBOX_CX - HITBOX_DISP / 2, HITBOX_CY - HITBOX_DISP / 2 - 24);
+
+  requestAnimationFrame(draw);
+}
+
+/* ── draw loop ────────────────────────────────────────────────────────── */
+function draw() {
+  if (hitboxMode) { drawHitboxTuner(); return; }
+
+  drawBackground();
+  fxCtx.clearRect(0, 0, 1920, 1080);
+
+  // peg box outline
+  if (devOpen) {
+    fxCtx.save();
+    fxCtx.fillStyle = 'rgba(0,240,255,0.06)';
+    fxCtx.strokeStyle = 'rgba(0,240,255,0.35)';
+    fxCtx.lineWidth = 1.5;
+    fxCtx.fillRect(cfg.pegBoxLeft, cfg.pegBoxTop, cfg.pegBoxRight - cfg.pegBoxLeft, cfg.pegBoxBottom - cfg.pegBoxTop);
+    fxCtx.strokeRect(cfg.pegBoxLeft, cfg.pegBoxTop, cfg.pegBoxRight - cfg.pegBoxLeft, cfg.pegBoxBottom - cfg.pegBoxTop);
+
+    // spawn / landing lines
+    fxCtx.strokeStyle = 'rgba(255,47,208,0.6)';
+    fxCtx.setLineDash([8, 6]);
+    [cfg.spawnY, cfg.landingY].forEach(y => {
+      fxCtx.beginPath(); fxCtx.moveTo(cfg.pegBoxLeft, y); fxCtx.lineTo(cfg.pegBoxRight, y); fxCtx.stroke();
+    });
+    fxCtx.setLineDash([]);
+
+    // side walls
+    fxCtx.strokeStyle = 'rgba(255,255,255,0.15)';
+    fxCtx.beginPath();
+    fxCtx.moveTo(cfg.pegBoxLeft, cfg.spawnY - 40); fxCtx.lineTo(cfg.pegBoxLeft, cfg.landingY + 40);
+    fxCtx.moveTo(cfg.pegBoxRight, cfg.spawnY - 40); fxCtx.lineTo(cfg.pegBoxRight, cfg.landingY + 40);
+    fxCtx.stroke();
+    fxCtx.restore();
+  }
+
+  // pegs
+  fxCtx.fillStyle = '#8a93c9';
+  pegBodies.forEach(p => {
+    fxCtx.beginPath();
+    fxCtx.arc(p.position.x, p.position.y, cfg.pegRadius, 0, Math.PI * 2);
+    fxCtx.fill();
+  });
+
+  // buttons
+  const now = performance.now();
+  for (let i = 0; i < NUM_BUTTONS; i++) {
+    const x = buttonX(i), y = cfg.landingY;
+    const flashing = now < flashUntil[i];
+    fxCtx.beginPath();
+    fxCtx.arc(x, y, cfg.buttonRadius, 0, Math.PI * 2);
+    fxCtx.fillStyle = flashing ? '#00f0ff' : 'rgba(0,240,255,0.25)';
+    fxCtx.fill();
+    fxCtx.strokeStyle = '#00f0ff';
+    fxCtx.lineWidth = 2;
+    fxCtx.stroke();
+    fxCtx.fillStyle = flashing ? '#061014' : '#dbe4ff';
+    fxCtx.font = 'bold 20px ui-monospace, monospace';
+    fxCtx.textAlign = 'center'; fxCtx.textBaseline = 'middle';
+    fxCtx.fillText(String(i + 1), x, y);
+  }
+  fxCtx.textAlign = 'left';
+
+  // sheep — rotated with the body's physical angle so tumbling actually reads
+  sheepBodies.forEach(b => {
+    const d = cfg.sheepRadius * 2;
+    if (sheepImgLoaded) {
+      fxCtx.save();
+      fxCtx.translate(b.position.x, b.position.y);
+      fxCtx.rotate(b.angle);
+      fxCtx.drawImage(sheepImg, -d / 2, -d / 2, d, d);
+      fxCtx.restore();
+    } else {
+      fxCtx.save();
+      fxCtx.translate(b.position.x, b.position.y);
+      fxCtx.rotate(b.angle);
+      fxCtx.fillStyle = '#f4f1e8';
+      fxCtx.strokeStyle = '#2a2c33';
+      fxCtx.lineWidth = 2;
+      fxCtx.beginPath();
+      fxCtx.arc(0, 0, cfg.sheepRadius, 0, Math.PI * 2);
+      fxCtx.fill(); fxCtx.stroke();
+      fxCtx.beginPath(); // spin indicator so rotation is visible even without the sprite
+      fxCtx.moveTo(0, 0); fxCtx.lineTo(cfg.sheepRadius, 0); fxCtx.stroke();
+      fxCtx.restore();
+    }
+  });
+
+  // drag handles
+  if (devOpen) {
+    handles.forEach(h => {
+      const pos = h.get();
+      const isHot = hoverKey === h.key || dragging === h;
+      fxCtx.beginPath();
+      fxCtx.arc(pos.x, pos.y, HANDLE_R, 0, Math.PI * 2);
+      fxCtx.fillStyle = isHot ? '#ff2fd0' : '#00f0ff';
+      fxCtx.fill();
+      fxCtx.strokeStyle = '#05060a';
+      fxCtx.lineWidth = 2;
+      fxCtx.stroke();
+    });
+  }
+
+  checkLanding();
+  requestAnimationFrame(draw);
+}
+
+/* ── dev drawer wiring ────────────────────────────────────────────────── */
+const drawer = document.getElementById('drawer');
+const devToggle = document.getElementById('devToggle');
+devToggle.addEventListener('click', () => {
+  devOpen = !devOpen;
+  drawer.classList.toggle('open', devOpen);
+  devToggle.classList.toggle('active', devOpen);
+});
+
+document.getElementById('btnSpawn').addEventListener('click', spawnSheep);
+document.getElementById('btnClear').addEventListener('click', clearSheep);
+
+const hitboxToggleBtn = document.getElementById('hitboxToggle');
+hitboxToggleBtn.addEventListener('click', () => {
+  hitboxMode = !hitboxMode;
+  hitboxToggleBtn.classList.toggle('active', hitboxMode);
+  if (hitboxMode && !devOpen) devToggle.click();
+});
+document.getElementById('btnHitboxReset').addEventListener('click', () => {
+  cfg.sheepHitbox = DEFAULT_SHEEP_HITBOX.map(p => p.slice());
+  updateHitboxReadout();
+  updateReadout();
+});
+document.getElementById('btnCopyHitbox').addEventListener('click', () => {
+  navigator.clipboard.writeText(JSON.stringify(cfg.sheepHitbox, null, 2)).then(() => log('hitbox copied to clipboard'));
+});
+
+function bindSlider(id, vId, key, onChange) {
+  const el = document.getElementById(id);
+  const vEl = document.getElementById(vId);
+  el.addEventListener('input', () => {
+    cfg[key] = parseFloat(el.value);
+    vEl.textContent = el.value;
+    if (onChange) onChange();
+    updateReadout();
+  });
+}
+bindSlider('pegR', 'vPegR', 'pegRadius', rebuildPegs);
+bindSlider('sheepR', 'vSheepR', 'sheepRadius');
+bindSlider('btnR', 'vBtnR', 'buttonRadius');
+bindSlider('spacing', 'vSpacing', 'spacing', rebuildPegs);
+bindSlider('gravity', 'vGrav', 'gravity', () => { engine.gravity.y = cfg.gravity; });
+bindSlider('restitution', 'vRest', 'restitution', () => {
+  [...pegBodies, ...wallBodies, ...sheepBodies].forEach(b => { b.restitution = cfg.restitution; });
+});
+bindSlider('friction', 'vFric', 'friction', () => {
+  [...pegBodies, ...sheepBodies].forEach(b => { b.friction = cfg.friction; });
+});
+bindSlider('airFriction', 'vAirFric', 'airFriction', () => {
+  sheepBodies.forEach(b => { b.frictionAir = cfg.airFriction; });
+});
+
+function syncSliders() {
+  document.getElementById('pegR').value = cfg.pegRadius;
+  document.getElementById('vPegR').textContent = cfg.pegRadius;
+  document.getElementById('sheepR').value = cfg.sheepRadius;
+  document.getElementById('vSheepR').textContent = cfg.sheepRadius;
+  document.getElementById('btnR').value = cfg.buttonRadius;
+  document.getElementById('vBtnR').textContent = cfg.buttonRadius;
+  document.getElementById('spacing').value = cfg.spacing;
+  document.getElementById('vSpacing').textContent = cfg.spacing;
+  document.getElementById('gravity').value = cfg.gravity;
+  document.getElementById('vGrav').textContent = cfg.gravity;
+  document.getElementById('restitution').value = cfg.restitution;
+  document.getElementById('vRest').textContent = cfg.restitution;
+  document.getElementById('friction').value = cfg.friction;
+  document.getElementById('vFric').textContent = cfg.friction;
+  document.getElementById('airFriction').value = cfg.airFriction;
+  document.getElementById('vAirFric').textContent = cfg.airFriction;
+}
+
+function round3(n) { return Math.round(n * 1000) / 1000; }
+
+function updateReadout() {
+  const rounded = {};
+  Object.keys(cfg).forEach(k => {
+    const v = cfg[k];
+    if (typeof v === 'number') rounded[k] = round3(v);
+    else if (Array.isArray(v)) rounded[k] = v.map(p => Array.isArray(p) ? p.map(round3) : p);
+    else rounded[k] = v;
+  });
+  document.getElementById('readout').textContent = JSON.stringify(rounded, null, 2);
+}
+
+function updateHitboxReadout() {
+  document.getElementById('hitboxReadout').textContent =
+    JSON.stringify(cfg.sheepHitbox.map(p => p.map(round3)), null, 2);
+}
+
+document.getElementById('btnCopy').addEventListener('click', () => {
+  navigator.clipboard.writeText(JSON.stringify(cfg, null, 2)).then(() => log('settings copied to clipboard'));
+});
+
+const logEl = document.getElementById('log');
+function log(msg) {
+  logEl.textContent += (logEl.textContent ? '\n' : '') + msg;
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+/* ── boot ─────────────────────────────────────────────────────────────── */
+Runner.run(Runner.create(), engine);
+rebuildAll();
+updateHitboxReadout();
+requestAnimationFrame(draw);
+log('Sheep Plinko dev harness ready.');
+</script>
+</body>
+</html>

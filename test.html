@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ES-9 CV/Gate Test Rig</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --bg:#12141a; --panel:#1a1d26; --line:#2a2e3a; --text:#e6e8ee; --dim:#8a90a0;
+    --accent:#5ec8a8; --accent2:#e0a45e; --danger:#e06060; --key:#eceff4; --keyb:#1c1e24;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    padding:24px; max-width:1000px; margin:0 auto;
+  }
+  h1{font-size:18px; font-weight:600; margin:0 0 4px;}
+  .sub{color:var(--dim); font-size:13px; margin-bottom:20px;}
+  .panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:16px 18px; margin-bottom:16px;
+  }
+  .panel h2{font-size:13px; text-transform:uppercase; letter-spacing:.05em; color:var(--dim); margin:0 0 12px; font-weight:600;}
+  .row{display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:10px;}
+  .row:last-child{margin-bottom:0;}
+  label{font-size:12px; color:var(--dim); display:block; margin-bottom:4px;}
+  select, input[type=number], input[type=range]{
+    background:#0f1116; border:1px solid var(--line); color:var(--text);
+    border-radius:6px; padding:6px 8px; font-size:13px;
+  }
+  select{min-width:220px;}
+  input[type=number]{width:80px;}
+  button{
+    background:var(--accent); border:none; color:#05221a; font-weight:600;
+    padding:8px 16px; border-radius:6px; cursor:pointer; font-size:13px;
+  }
+  button.secondary{background:#2a2e3a; color:var(--text);}
+  button.danger{background:var(--danger); color:#2a0a0a;}
+  button:disabled{opacity:.4; cursor:not-allowed;}
+  .status{font-size:12px; padding:4px 10px; border-radius:20px; background:#2a2e3a; color:var(--dim);}
+  .status.ok{background:#1c3a30; color:var(--accent);}
+  .status.err{background:#3a1c1c; color:var(--danger);}
+  .field{display:flex; flex-direction:column;}
+  .monitor{display:flex; gap:24px;}
+  .meter{flex:1; background:#0f1116; border:1px solid var(--line); border-radius:8px; padding:12px;}
+  .meter .ch{font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:.05em;}
+  .meter .val{font-size:22px; font-weight:600; margin-top:4px;}
+  .bar{height:6px; background:#20232c; border-radius:3px; margin-top:8px; overflow:hidden;}
+  .bar > div{height:100%; background:var(--accent); width:0%; transition:width .05s linear;}
+  #gateBar > div{background:var(--accent2);}
+
+  .piano{position:relative; height:150px; display:flex; user-select:none; margin-top:4px;}
+  .wkey{
+    flex:1; background:var(--key); border:1px solid #999; border-radius:0 0 4px 4px;
+    display:flex; align-items:flex-end; justify-content:center; padding-bottom:6px;
+    font-size:10px; color:#444; cursor:pointer; position:relative;
+  }
+  .wkey.active{background:var(--accent);}
+  .wkey.pool{box-shadow:inset 0 0 0 3px var(--accent2);}
+  .bkey{
+    position:absolute; top:0; width:6%; height:60%; background:var(--keyb);
+    border-radius:0 0 3px 3px; cursor:pointer; z-index:2;
+    display:flex; align-items:flex-end; justify-content:center; padding-bottom:4px;
+    font-size:9px; color:#aaa;
+  }
+  .bkey.active{background:var(--accent);}
+  .bkey.pool{box-shadow:inset 0 0 0 2px var(--accent2);}
+  .hint{font-size:11px; color:var(--dim); margin-top:8px;}
+
+  .pool-list{display:flex; gap:6px; flex-wrap:wrap; min-height:24px;}
+  .pool-chip{background:#2a2e3a; border:1px solid var(--accent2); color:var(--accent2); border-radius:12px; padding:2px 10px; font-size:12px;}
+</style>
+</head>
+<body>
+
+<h1>ES-9 CV / Gate Test Rig</h1>
+<div class="sub">Web Audio → multichannel output → ES-9 → Tonestar 8106 (1V/oct CV in, gate in)</div>
+
+<div class="panel">
+  <h2>Device</h2>
+  <div class="row">
+    <div class="field">
+      <label>Output device</label>
+      <select id="deviceSelect"><option>Click "Scan devices" first</option></select>
+    </div>
+    <button id="scanBtn" class="secondary">Scan devices</button>
+    <button id="connectBtn">Connect</button>
+    <button id="disconnectBtn" class="secondary" disabled>Disconnect</button>
+    <span id="status" class="status">not connected</span>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Channel routing</h2>
+  <div class="row">
+    <div class="field">
+      <label>Pitch CV → DAW channel</label>
+      <input type="number" id="cvChannel" value="9" min="1" max="16" step="1">
+    </div>
+    <div class="field">
+      <label>Gate → DAW channel</label>
+      <input type="number" id="gateChannel" value="10" min="1" max="16" step="1">
+    </div>
+  </div>
+  <div class="hint">
+    ES-9 default channel numbering: <b>1/2</b> main balanced outs (not DC-coupled), <b>3/4</b> headphone mix,
+    <b>5/6</b> S/PDIF, <b>7/8</b> ES-5, <b>9–16</b> the DC-coupled 3.5mm Eurorack jacks — jack "Out 1" is channel 9,
+    "Out 2" is channel 10, etc. Change these numbers here if you've remapped channels in the ES-9 config tool.
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Calibration</h2>
+  <div class="row">
+    <div class="field">
+      <label>Full-scale voltage (what 1.0 in Web Audio measures on your ES-9 output)</label>
+      <input type="number" id="fsVolts" value="10" step="0.1">
+    </div>
+    <div class="field">
+      <label>Root note (0V reference)</label>
+      <select id="rootNote"></select>
+    </div>
+    <div class="field">
+      <label>Gate high voltage</label>
+      <input type="number" id="gateVolts" value="8" step="0.1">
+    </div>
+  </div>
+  <div class="hint">Patch the CV jack into a scope or a known 1V/oct source and measure. The 3.5mm outs are rated ~&plusmn;10V max; adjust until octaves land correctly on the Tonestar.</div>
+</div>
+
+<div class="panel">
+  <h2>Output monitor — Out 1 / Out 2</h2>
+  <div class="monitor">
+    <div class="meter">
+      <div class="ch">Out 1 · Pitch CV</div>
+      <div class="val" id="cvVal">0.00 V</div>
+      <div class="bar"><div id="cvBar"></div></div>
+    </div>
+    <div class="meter">
+      <div class="ch">Out 2 · Gate</div>
+      <div class="val" id="gateVal">0.00 V</div>
+      <div class="bar" id="gateBar"><div></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Piano</h2>
+  <div class="piano" id="piano"></div>
+  <div class="hint">Click/hold a key to play. Cmd/Ctrl-click to add or remove it from the arp pool (outlined keys). Keyboard: A W S E D F T G Y H U J K = one octave from root.</div>
+  <div class="row" style="margin-top:10px;">
+    <div class="field">
+      <label>Arp pool</label>
+      <div class="pool-list" id="poolList"></div>
+    </div>
+    <button id="clearPool" class="secondary">Clear pool</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Arpeggiator</h2>
+  <div class="row">
+    <div class="field">
+      <label>Rate (Hz)</label>
+      <input type="range" id="arpRate" min="0.5" max="20" step="0.1" value="4">
+      <span id="arpRateVal" class="hint">4.0 Hz</span>
+    </div>
+    <div class="field">
+      <label>Style</label>
+      <select id="arpStyle">
+        <option value="up">Up</option>
+        <option value="down">Down</option>
+        <option value="updown">Up/Down</option>
+        <option value="asplayed">As played</option>
+        <option value="random">Random</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Octave range</label>
+      <select id="arpOctaves">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Gate length (%)</label>
+      <input type="range" id="gateLength" min="5" max="100" step="5" value="60">
+      <span id="gateLengthVal" class="hint">60%</span>
+    </div>
+    <button id="arpToggle" disabled>Start Arp</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  const WHITE_OFFSETS = [0,2,4,5,7,9,11];
+  const BLACK_OFFSETS = [1,3,-1,6,8,10,-1]; // -1 = no black key after this white key
+
+  const MERGER_CHANNELS = 16;
+  let ctx = null, merger = null, streamDest = null, audioEl = null;
+  let pitchSrc = null, gateSrc = null;
+  let connected = false;
+  let usingNativeSink = false;
+
+  const heldStack = []; // monophonic priority stack of note numbers
+  const arpPool = [];   // notes selected via cmd/ctrl-click
+  let arpRunning = false;
+  let arpTimer = null;
+  let nextStepTime = 0, stepIndex = 0;
+  const lookahead = 0.1, schedInterval = 25;
+
+  const el = id => document.getElementById(id);
+  const fsVolts = () => parseFloat(el('fsVolts').value) || 5;
+  const gateVolts = () => parseFloat(el('gateVolts').value) || 5;
+  const rootNote = () => parseInt(el('rootNote').value, 10);
+
+  // ---------- root note dropdown ----------
+  for (let n = 48; n <= 72; n++) {
+    const name = NOTE_NAMES[n % 12] + (Math.floor(n/12)-1);
+    const opt = document.createElement('option');
+    opt.value = n; opt.textContent = name;
+    if (n === 60) opt.selected = true;
+    el('rootNote').appendChild(opt);
+  }
+
+  // ---------- device scan ----------
+  el('scanBtn').onclick = async () => {
+    try {
+      const tmp = await navigator.mediaDevices.getUserMedia({audio:true});
+      tmp.getTracks().forEach(t => t.stop());
+    } catch (e) {
+      setStatus('mic permission needed to list device names', 'err');
+      return;
+    }
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const outputs = devices.filter(d => d.kind === 'audiooutput');
+    const sel = el('deviceSelect');
+    sel.innerHTML = '';
+    if (!outputs.length) {
+      sel.innerHTML = '<option>No output devices found</option>';
+      return;
+    }
+    outputs.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.deviceId;
+      opt.textContent = d.label || d.deviceId;
+      sel.appendChild(opt);
+    });
+  };
+
+  // ---------- connect / disconnect ----------
+  el('connectBtn').onclick = async () => {
+    const deviceId = el('deviceSelect').value;
+    if (!deviceId) { setStatus('scan and pick a device first', 'err'); return; }
+    try {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      merger = ctx.createChannelMerger(MERGER_CHANNELS);
+
+      pitchSrc = ctx.createConstantSource();
+      pitchSrc.offset.value = 0;
+      pitchSrc.start();
+
+      gateSrc = ctx.createConstantSource();
+      gateSrc.offset.value = 0;
+      gateSrc.start();
+
+      if (typeof ctx.setSinkId === 'function') {
+        // Preferred: native multichannel-capable route, straight to ctx.destination.
+        usingNativeSink = true;
+        await ctx.setSinkId(deviceId);
+        const maxCh = ctx.destination.maxChannelCount || MERGER_CHANNELS;
+        ctx.destination.channelCount = Math.min(MERGER_CHANNELS, maxCh);
+        ctx.destination.channelCountMode = 'explicit';
+        ctx.destination.channelInterpretation = 'discrete';
+        merger.connect(ctx.destination);
+        if (maxCh < MERGER_CHANNELS) {
+          setStatus(`connected (device only reports ${maxCh} channels)`, 'err');
+        }
+      } else {
+        // Fallback for browsers without AudioContext.setSinkId: route through
+        // a MediaStreamAudioDestinationNode + <audio> element. Known to be
+        // capped to stereo on some Chromium versions.
+        usingNativeSink = false;
+        streamDest = ctx.createMediaStreamDestination();
+        streamDest.channelCount = MERGER_CHANNELS;
+        streamDest.channelCountMode = 'explicit';
+        streamDest.channelInterpretation = 'discrete';
+        merger.connect(streamDest);
+
+        audioEl = new Audio();
+        audioEl.srcObject = streamDest.stream;
+        audioEl.autoplay = true;
+        if (typeof audioEl.setSinkId !== 'function') {
+          setStatus('setSinkId not supported in this browser', 'err');
+          return;
+        }
+        await audioEl.setSinkId(deviceId);
+        await audioEl.play();
+      }
+
+      wireOutputs();
+      connected = true;
+      if (el('status').className.indexOf('err') === -1) setStatus('connected', 'ok');
+      el('connectBtn').disabled = true;
+      el('disconnectBtn').disabled = false;
+      el('arpToggle').disabled = false;
+      startMonitor();
+    } catch (e) {
+      console.error(e);
+      setStatus('connect failed: ' + e.message, 'err');
+    }
+  };
+
+  // (Re)connect pitch/gate ConstantSourceNodes to the merger inputs matching
+  // the channel numbers chosen in the Channel routing panel (1-indexed).
+  function wireOutputs() {
+    if (!merger) return;
+    try { pitchSrc.disconnect(merger); } catch (e) {}
+    try { gateSrc.disconnect(merger); } catch (e) {}
+    const cvCh = Math.max(1, Math.min(MERGER_CHANNELS, parseInt(el('cvChannel').value, 10) || 9)) - 1;
+    const gateCh = Math.max(1, Math.min(MERGER_CHANNELS, parseInt(el('gateChannel').value, 10) || 10)) - 1;
+    pitchSrc.connect(merger, 0, cvCh);
+    gateSrc.connect(merger, 0, gateCh);
+  }
+  el('cvChannel').addEventListener('change', () => { if (connected) wireOutputs(); });
+  el('gateChannel').addEventListener('change', () => { if (connected) wireOutputs(); });
+
+  el('disconnectBtn').onclick = () => {
+    stopArp();
+    if (audioEl) { audioEl.pause(); audioEl.srcObject = null; audioEl = null; }
+    if (ctx) ctx.close();
+    ctx = null; merger = null; streamDest = null; connected = false;
+    setStatus('not connected');
+    el('connectBtn').disabled = false;
+    el('disconnectBtn').disabled = true;
+    el('arpToggle').disabled = true;
+  };
+
+  function setStatus(text, cls) {
+    const s = el('status');
+    s.textContent = text;
+    s.className = 'status' + (cls ? ' ' + cls : '');
+  }
+
+  // ---------- monitor ----------
+  function startMonitor() {
+    function tick() {
+      if (!connected) return;
+      const cv = pitchSrc.offset.value * fsVolts();
+      const gate = gateSrc.offset.value * fsVolts();
+      el('cvVal').textContent = cv.toFixed(2) + ' V';
+      el('gateVal').textContent = gate.toFixed(2) + ' V';
+      el('cvBar').style.width = Math.min(100, Math.abs(cv) / fsVolts() * 100) + '%';
+      el('gateBar').firstElementChild.style.width = (gate > fsVolts()/2 ? 100 : 0) + '%';
+      requestAnimationFrame(tick);
+    }
+    tick();
+  }
+
+  // ---------- note -> voltage ----------
+  function noteToUnit(note) {
+    const volts = (note - rootNote()) / 12;
+    return Math.max(-1, Math.min(1, volts / fsVolts()));
+  }
+
+  function noteOn(note, time) {
+    if (!connected) return;
+    const t = time ?? ctx.currentTime;
+    pitchSrc.offset.setValueAtTime(noteToUnit(note), t);
+    gateSrc.offset.setValueAtTime(gateVolts() / fsVolts(), t);
+  }
+  function gateOff(time) {
+    if (!connected) return;
+    gateSrc.offset.setValueAtTime(0, time ?? ctx.currentTime);
+  }
+  function retuneOnly(note, time) {
+    if (!connected) return;
+    pitchSrc.offset.setValueAtTime(noteToUnit(note), time ?? ctx.currentTime);
+  }
+
+  // ---------- piano ----------
+  const KB_MAP = { // one octave from root
+    'a':0,'w':1,'s':2,'e':3,'d':4,'f':5,'t':6,'g':7,'y':8,'h':9,'u':10,'j':11,'k':12
+  };
+  const pianoEl = el('piano');
+  const OCTAVES = 2;
+  const keyElsByNote = {};
+
+  function buildPiano() {
+    pianoEl.innerHTML = '';
+    const base = rootNote();
+    const whiteKeys = [];
+    let whiteIndex = 0;
+    for (let oct = 0; oct < OCTAVES; oct++) {
+      WHITE_OFFSETS.forEach((wOff, i) => {
+        const note = base + oct*12 + wOff;
+        const wk = document.createElement('div');
+        wk.className = 'wkey';
+        wk.dataset.note = note;
+        wk.textContent = NOTE_NAMES[note % 12];
+        pianoEl.appendChild(wk);
+        keyElsByNote[note] = keyElsByNote[note] || [];
+        keyElsByNote[note].push(wk);
+        attachKeyEvents(wk, note);
+        whiteKeys.push({el: wk, idx: whiteIndex});
+        const bOff = BLACK_OFFSETS[i];
+        if (bOff !== -1) {
+          const bnote = base + oct*12 + bOff;
+          const bk = document.createElement('div');
+          bk.className = 'bkey';
+          bk.dataset.note = bnote;
+          bk.style.left = (( (whiteIndex+1) / (7*OCTAVES) ) * 100 - 3) + '%';
+          pianoEl.appendChild(bk);
+          keyElsByNote[bnote] = keyElsByNote[bnote] || [];
+          keyElsByNote[bnote].push(bk);
+          attachKeyEvents(bk, bnote);
+        }
+        whiteIndex++;
+      });
+    }
+  }
+
+  function attachKeyEvents(elKey, note) {
+    elKey.addEventListener('mousedown', (e) => {
+      if (e.metaKey || e.ctrlKey) { togglePool(note); return; }
+      pressNote(note);
+    });
+    elKey.addEventListener('mouseup', () => releaseNote(note));
+    elKey.addEventListener('mouseleave', (e) => { if (e.buttons === 1) releaseNote(note); });
+  }
+
+  function refreshKeyVisuals() {
+    Object.entries(keyElsByNote).forEach(([note, elsArr]) => {
+      note = parseInt(note, 10);
+      const isHeld = heldStack.includes(note);
+      const inPool = arpPool.includes(note);
+      elsArr.forEach(e => {
+        e.classList.toggle('active', isHeld);
+        e.classList.toggle('pool', inPool);
+      });
+    });
+  }
+
+  function pressNote(note) {
+    if (!connected) return;
+    if (!heldStack.includes(note)) heldStack.push(note);
+    noteOn(note);
+    refreshKeyVisuals();
+  }
+  function releaseNote(note) {
+    if (!connected) return;
+    const idx = heldStack.indexOf(note);
+    if (idx !== -1) heldStack.splice(idx, 1);
+    if (heldStack.length === 0) {
+      gateOff();
+    } else {
+      retuneOnly(heldStack[heldStack.length-1]);
+    }
+    refreshKeyVisuals();
+  }
+  function togglePool(note) {
+    const idx = arpPool.indexOf(note);
+    if (idx === -1) arpPool.push(note); else arpPool.splice(idx, 1);
+    refreshKeyVisuals();
+    refreshPoolList();
+  }
+  function refreshPoolList() {
+    const list = el('poolList');
+    list.innerHTML = '';
+    arpPool.slice().sort((a,b)=>a-b).forEach(n => {
+      const chip = document.createElement('span');
+      chip.className = 'pool-chip';
+      chip.textContent = NOTE_NAMES[n%12] + (Math.floor(n/12)-1);
+      list.appendChild(chip);
+    });
+  }
+  el('clearPool').onclick = () => { arpPool.length = 0; refreshKeyVisuals(); refreshPoolList(); };
+
+  // computer keyboard
+  const kbHeld = new Set();
+  window.addEventListener('keydown', (e) => {
+    if (e.repeat) return;
+    const k = e.key.toLowerCase();
+    if (KB_MAP.hasOwnProperty(k) && !kbHeld.has(k)) {
+      kbHeld.add(k);
+      if (e.metaKey || e.ctrlKey) { togglePool(rootNote() + KB_MAP[k]); return; }
+      pressNote(rootNote() + KB_MAP[k]);
+    }
+  });
+  window.addEventListener('keyup', (e) => {
+    const k = e.key.toLowerCase();
+    if (KB_MAP.hasOwnProperty(k)) {
+      kbHeld.delete(k);
+      releaseNote(rootNote() + KB_MAP[k]);
+    }
+  });
+
+  el('rootNote').addEventListener('change', buildPiano);
+  buildPiano();
+
+  // ---------- arpeggiator ----------
+  function buildSequence() {
+    if (arpPool.length === 0) return [];
+    const style = el('arpStyle').value;
+    const octaves = parseInt(el('arpOctaves').value, 10);
+    let base;
+    if (style === 'asplayed') base = arpPool.slice();
+    else base = arpPool.slice().sort((a,b)=>a-b);
+
+    let seq = [];
+    for (let o = 0; o < octaves; o++) {
+      base.forEach(n => seq.push(n + 12*o));
+    }
+    if (style === 'down') seq.reverse();
+    if (style === 'updown') {
+      const down = seq.slice(1, -1).reverse();
+      seq = seq.concat(down);
+    }
+    if (style === 'random') {
+      // reshuffled each cycle at schedule time instead of statically
+      return seq; // base set; scheduleStep will pick randomly
+    }
+    return seq;
+  }
+
+  function scheduleStep(note, time) {
+    const rate = parseFloat(el('arpRate').value);
+    const stepDur = 1 / rate;
+    const gatePct = parseFloat(el('gateLength').value) / 100;
+    pitchSrc.offset.setValueAtTime(noteToUnit(note), time);
+    gateSrc.offset.setValueAtTime(gateVolts() / fsVolts(), time);
+    gateSrc.offset.setValueAtTime(0, time + stepDur * gatePct);
+  }
+
+  function schedulerTick() {
+    if (!arpRunning) return;
+    const rate = parseFloat(el('arpRate').value);
+    const stepDur = 1 / rate;
+    const style = el('arpStyle').value;
+    const seq = buildSequence();
+    while (seq.length && nextStepTime < ctx.currentTime + lookahead) {
+      let note;
+      if (style === 'random') note = seq[Math.floor(Math.random()*seq.length)];
+      else note = seq[stepIndex % seq.length];
+      scheduleStep(note, nextStepTime);
+      stepIndex++;
+      nextStepTime += stepDur;
+    }
+    arpTimer = setTimeout(schedulerTick, schedInterval);
+  }
+
+  function startArp() {
+    if (arpPool.length === 0) { setStatus('add notes to the arp pool first', 'err'); return; }
+    arpRunning = true;
+    stepIndex = 0;
+    nextStepTime = ctx.currentTime + 0.05;
+    schedulerTick();
+    el('arpToggle').textContent = 'Stop Arp';
+  }
+  function stopArp() {
+    arpRunning = false;
+    if (arpTimer) clearTimeout(arpTimer);
+    if (connected) gateOff();
+    el('arpToggle').textContent = 'Start Arp';
+  }
+  el('arpToggle').onclick = () => arpRunning ? stopArp() : startArp();
+
+  el('arpRate').addEventListener('input', () => {
+    el('arpRateVal').textContent = parseFloat(el('arpRate').value).toFixed(1) + ' Hz';
+  });
+  el('gateLength').addEventListener('input', () => {
+    el('gateLengthVal').textContent = el('gateLength').value + '%';
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Heiðrún — prototype</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #f3ead9;
+    --pastel-0: #f4a3a3;
+    --pastel-1: #f7c98a;
+    --pastel-2: #f6e28a;
+    --pastel-3: #a8d8b9;
+    --pastel-4: #9fc9e8;
+    --pastel-5: #c6a8e0;
+    --ink: rgba(50, 40, 30, 0.85);
+    --ink-dim: rgba(50, 40, 30, 0.55);
+    --line: rgba(60, 50, 40, 0.25);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    background: var(--bg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--ink);
+  }
+  canvas { display: block; touch-action: none; }
+
+  /* pills — minimal, small, background fill + tiny border, pastel highlight on focus */
+  .pill, select.pill, input.pill, button.pill {
+    background: #fffaf0;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 11px;
+    color: var(--ink);
+    font-family: inherit;
+    cursor: pointer;
+  }
+  input.pill, select.pill { cursor: text; }
+  .pill:focus, select.pill:focus, input.pill:focus {
+    outline: none;
+    border-color: var(--pastel-0);
+    box-shadow: 0 0 0 2px var(--pastel-0);
+  }
+  button.danger { border-color: var(--pastel-0); color: #8a3b3b; }
+
+  /* Live physics-body counter, next to the peg field tool — that's exactly
+     where density explodes (spacing/size on one field), so the number that
+     matters is visible right where you're most likely to cause it. Plain
+     text, no pill chrome — it's a passive readout, not a control. Turns the
+     same pastel-red already used for "active"/at-limit UI elsewhere
+     (icon-btn.active) once the object cap (physics card, off by default) is
+     on and reached. */
+  #bodyCounter {
+    pointer-events: none; cursor: default; align-self: center;
+    font-size: 11px; color: var(--ink-dim); min-width: 20px;
+  }
+  #bodyCounter.at-cap { color: #8a3b3b; font-weight: 600; }
+
+  /* Object cap card (systemMenu.js) — toggle + number on one line, since the
+     card's own "Object cap" title already says what the row is for. */
+  .cap-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .cap-row input.pill { flex: 1; min-width: 0; }
+
+  input[type=color] {
+    border: 1px solid var(--line); border-radius: 6px; padding: 0;
+    height: 22px; width: 100%; background: none; cursor: pointer;
+  }
+
+  #toolbar {
+    position: fixed; top: 12px; left: 12px; z-index: 5;
+    display: flex; gap: 6px;
+  }
+
+  /* naked icon buttons — no pill chrome, per feedback (hamburger/pause don't need a background) */
+  .icon-btn {
+    background: transparent; border: none; color: var(--ink);
+    font-size: 15px; width: 30px; height: 30px; border-radius: 50%;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .icon-btn:hover { background: rgba(60, 50, 40, 0.08); }
+  /* Mute Unsent / Mute All (prototype.md §15) — audio-only, independent of
+     Pause; .active picks up a pastel fill so it reads at a glance which
+     mute layer (if any) is currently engaged. */
+  .icon-btn.active { background: var(--pastel-0); color: #5a2a2a; }
+  .icon-btn.active:hover { background: var(--pastel-0); }
+  #topBar .mode-label { font-size: 10px; color: var(--ink-dim); margin-right: 2px; }
+
+  #topBar {
+    position: fixed; top: 10px; right: 12px; z-index: 9;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  /* small sliding toggle — mode switch, and reused inline in popovers for On/Sound/Auto chord */
+  .toggle-switch { position: relative; display: inline-block; width: 30px; height: 17px; cursor: pointer; flex: none; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .toggle-slider {
+    position: absolute; inset: 0; background: #e3d9c6; border: 1px solid var(--line);
+    border-radius: 999px; transition: background 0.15s ease;
+  }
+  .toggle-slider::before {
+    content: ''; position: absolute; width: 13px; height: 13px; left: 2px; top: 1px;
+    background: #fffaf0; border-radius: 50%; transition: transform 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  }
+  .toggle-switch input:checked + .toggle-slider { background: var(--pastel-3); }
+  .toggle-switch input:checked + .toggle-slider::before { transform: translateX(13px); }
+
+  #audioHint {
+    position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; color: var(--ink-dim);
+    background: #fffaf0; border: 1px solid var(--line); border-radius: 999px;
+    padding: 4px 12px; z-index: 4; pointer-events: none;
+  }
+
+  /* Wide, top-anchored sheet rather than a tall right-hand sidebar — this
+     panel is going to keep growing (default sizes now, per-instrument sound
+     design later per handoff.md), and rows of cards use the horizontal space
+     a canvas app already has plenty of instead of turning into one long
+     vertical scroll. */
+  #systemMenu {
+    position: fixed; top: 10px; right: 10px; left: 10px; z-index: 8;
+    max-height: calc(100vh - 20px);
+    background: rgba(255, 250, 240, 0.98);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 18px 20px;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(50, 40, 30, 0.18);
+    transform: translateY(-12px);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.18s ease, opacity 0.18s ease;
+  }
+  #systemMenu.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
+  .menu-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .menu-title { font-size: 13px; font-weight: 600; letter-spacing: 0.02em; }
+  /* Global and Instruments sit side by side, not stacked — Global's cards
+     are few and compact, so stacking it above the much taller Instruments
+     section left a lot of dead space under it. Global gets a narrower fixed
+     column (its own grid packs cards two-per-row in that width); Instruments
+     takes whatever's left and keeps reflowing into more rows/columns as
+     cards are added, same as before. */
+  .menu-columns { display: flex; gap: 16px; align-items: flex-start; }
+  .menu-group { min-width: 0; }
+  /* Flexible up to a cap, not fixed — grows/shrinks with the panel but never
+     past 400px, since Global's cards don't need more than that to stay
+     two-per-row. */
+  .menu-group-global { flex: 0 1 400px; max-width: 400px; min-width: 240px; }
+  .menu-group-instruments { flex: 1; min-width: 0; }
+  .menu-group-title {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--ink-dim); margin: 0 0 8px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--line);
+  }
+  /* Masonry via CSS multi-column rather than CSS Grid — a fixed row height
+     (grid's default) wastes space under every short card whenever its row
+     neighbor is tall; columns instead let each card sit directly under
+     whatever's above it in its own column, no gaps. Column *count* is
+     capped (2 for Global, 3 for Instruments) while each column's actual
+     width still flexes with the panel, per feedback. `break-inside: avoid`
+     keeps a card from being split across the column break; `column-span:
+     all` lets the JSON card still span the full width it needs. */
+  .menu-grid { column-gap: 12px; }
+  .menu-group-global .menu-grid { column-count: 2; }
+  .menu-group-instruments .menu-grid { column-count: 3; }
+  /* Narrower viewports: fewer columns before things get cramped, and below
+     900px the two groups stack (full width) instead of sitting side by side. */
+  @media (max-width: 900px) {
+    .menu-columns { flex-direction: column; width: 100%; }
+    .menu-group-global { flex-basis: auto; max-width: none; width: 100%; }
+    .menu-group-instruments .menu-grid { column-count: 2; }
+  }
+  @media (max-width: 600px) {
+    .menu-group-global .menu-grid { column-count: 1; }
+    .menu-group-instruments .menu-grid { column-count: 1; }
+  }
+  .menu-card {
+    background: #fffaf0;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 12px 12px;
+    break-inside: avoid;
+    margin-bottom: 12px;
+  }
+  .menu-card-wide { column-span: all; }
+  #systemMenu h3 {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--ink-dim); margin: 0 0 8px;
+  }
+
+  .pfield { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; font-size: 10px; color: var(--ink-dim); }
+  /* Every pill fills its field wrapper's width — a standalone field (not in a
+     .prow, e.g. Height under a rect's Width row) would otherwise fall back to
+     the browser's default input width, which is wider than a flexed pill and
+     drags the whole popover's width along with it. */
+  .pfield input.pill, .pfield select.pill { width: 100%; }
+  .prow { display: flex; gap: 6px; margin-bottom: 4px; }
+  .prow .pill, .prow .pfield { flex: 1; min-width: 0; }
+  .jsonbox {
+    width: 100%; height: 90px; font-family: ui-monospace, monospace; font-size: 10px;
+    background: #fffaf0; border: 1px solid var(--line); border-radius: 8px; padding: 6px;
+    resize: vertical;
+  }
+  .swatch-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 4px; }
+
+  /* compact single-line toggle row — replaces the old label-above-checkbox layout */
+  .trow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; font-size: 10px; color: var(--ink-dim); }
+
+  .shape-cycler { display: flex; align-items: center; gap: 2px; }
+  .cycler-btn {
+    background: transparent; border: 1px solid var(--line); border-radius: 999px;
+    width: 18px; height: 18px; font-size: 11px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; color: var(--ink);
+  }
+  .cycler-preview { font-size: 14px; width: 20px; text-align: center; }
+
+  .step-grid { display: flex; flex-wrap: wrap; gap: 3px; margin: 4px 0; }
+  .step-btn {
+    width: 20px; height: 20px; border-radius: 4px; border: 1px solid var(--line);
+    background: #fffaf0; font-size: 9px; cursor: pointer; color: var(--ink-dim);
+  }
+  .step-btn.on { background: var(--pastel-3); border-color: var(--pastel-3); color: var(--ink); }
+
+  .hint { font-size: 9px; color: var(--ink-dim); line-height: 1.4; margin: 2px 0 6px; }
+
+  /* Piano note-picker (pitchBehavior 'piano', §16/handoff.md) — continuous
+     3-octave strip, 21 white keys laid out with flex so the whole thing
+     scales with the popover's width; black keys absolutely positioned by
+     percentage (objectPopover.js computes each one's left offset) rather
+     than fixed pixels, for the same reason. Fiddly at this size is expected
+     and accepted, not a bug to fix later. */
+  .piano { position: relative; height: 64px; margin: 4px 0 6px; }
+  .piano-white-row { display: flex; height: 100%; gap: 1px; }
+  .piano-key { padding: 0; border: 1px solid var(--line); cursor: pointer; }
+  .piano-white { flex: 1; height: 100%; background: #fffaf0; border-radius: 0 0 3px 3px; }
+  .piano-white.on { background: var(--pastel-3); }
+  .piano-black {
+    position: absolute; top: 0; width: 2.6%; height: 60%;
+    background: #3a322a; border-color: #221c16; border-radius: 0 0 2px 2px; z-index: 2;
+  }
+  .piano-black.on { background: var(--pastel-3); border-color: var(--pastel-3); }
+
+  #popoverRoot { position: fixed; inset: 0; pointer-events: none; z-index: 7; }
+  .popover {
+    position: absolute; pointer-events: auto;
+    background: rgba(255, 250, 240, 0.98);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px 12px;
+    width: 280px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 6px 20px rgba(50, 40, 30, 0.15);
+    transform: translate(14px, -50%);
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .popover-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+  .popover-title { font-size: 10px; text-transform: capitalize; color: var(--ink-dim); letter-spacing: 0.04em; flex: 1; }
+  .header-toggle { display: flex; align-items: center; gap: 4px; font-size: 9px; color: var(--ink-dim); flex: none; }
+  .popover .psection { border-top: 1px dashed var(--line); margin-top: 6px; padding-top: 6px; }
+  .popover .psub-heading { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-dim); margin: 6px 0 2px; }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div id="toolbar">
+  <button id="toolBouncer" class="pill">+ Bouncer</button>
+  <button id="toolTrigger" class="pill">+ Trigger</button>
+  <button id="toolSpawner" class="pill">+ Spawner</button>
+  <button id="toolPegField" class="pill">+ Peg field</button>
+  <span id="bodyCounter" title="Live physics bodies (pegs count individually)">0</span>
+</div>
+
+<div id="topBar">
+  <button id="muteUnsentBtn" class="icon-btn" title="Mute Unsent — silence the app, keep ES-9 output">🔈</button>
+  <button id="muteAllBtn" class="icon-btn" title="Mute All — silence app + ES-9 output">🔇</button>
+  <span class="mode-label">Clean</span>
+  <label class="toggle-switch" title="Build / Clean mode">
+    <input type="checkbox" id="modeToggle">
+    <span class="toggle-slider"></span>
+  </label>
+  <button id="pauseBtn" class="icon-btn" title="Play">▶</button>
+  <button id="hamburger" class="icon-btn">☰</button>
+</div>
+
+<div id="systemMenu"></div>
+<div id="popoverRoot"></div>
+<div id="audioHint">Click anywhere on the canvas to enable audio</div>
+
+<script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
