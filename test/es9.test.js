@@ -41,7 +41,7 @@ test('patchedChannelSummary counts distinct channels across every object, dedupl
   const a = createBouncer({ withSound: true });
   a.sound.es9 = createEs9Module({ enabled: true, lines: [{ channel: 1, signal: 'pitch' }, { channel: 2, signal: 'gate' }] });
   const b = createBouncer({ withSound: true });
-  // Same channel 1 as `a`, deliberately allowed (prototype.md §15) — should
+  // Same channel 1 as `a`, deliberately allowed — should
   // still only count once toward the total.
   b.sound.es9 = createEs9Module({ enabled: true, lines: [{ channel: 1, signal: 'adsr' }] });
   const disabled = createBouncer({ withSound: true });

@@ -1,5 +1,5 @@
 // localStorage as a real project store — an index plus one JSON blob per
-// canvas, giving actual open/save/save-as/delete/rename (prototype.md §10).
+// canvas, giving actual open/save/save-as/delete/rename.
 const INDEX_KEY = 'heidrun:projects';
 
 function readIndex() {

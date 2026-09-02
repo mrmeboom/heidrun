@@ -1,5 +1,5 @@
-// AudioContext + the two shared return channels (reverb, delay) — prototype.md
-// §9: effects are buses any voice can send to with its own gain, not objects.
+// AudioContext + the two shared return channels (reverb, delay) — effects
+// are buses any voice can send to with its own gain, not objects.
 let ctx = null;
 let master = null;
 let reverbBus = null;
@@ -38,7 +38,7 @@ function initAudio() {
   limiter.release.value = 0.15;
   master.connect(limiter);
 
-  // Mute Unsent / Mute All's app-side half (prototype.md §15) — a plain gain
+  // Mute Unsent / Mute All's app-side half — a plain gain
   // after the limiter, muted independently of Pause so physics/spawning/ES-9
   // output keep running underneath and un-muting never desyncs anything.
   muteGain = ctx.createGain();

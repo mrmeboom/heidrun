@@ -1,6 +1,6 @@
-// Uniform generator interface — architecture.md §5. Any object can hold one of
+// Uniform generator interface — architecture.md §3. Any object can hold one of
 // these; nothing downstream needs to know which type it is, or which index space
-// (clock-tick for spawn modules, hit-count for sound modules — prototype.md §8.6)
+// (clock-tick for spawn modules, hit-count for sound modules)
 // is feeding it.
 import { PRIME_TABLE, FIBONACCI_GATE_TABLE } from './tables.js';
 import { createMarkovGenerator } from './markov.js';

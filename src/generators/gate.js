@@ -1,6 +1,6 @@
-// Evaluates a hit/tick-indexed gate (prototype.md §8.6) and advances its index.
+// Evaluates a hit/tick-indexed gate and advances its index.
 // A null type means "always-on" — every hit/tick passes, the default for sound
-// modules per §8.6, and how a spawner's exact schedule passes straight through
+// modules, and how a spawner's exact schedule passes straight through
 // a receiving object untouched. 'off' is the opposite sentinel — always fails,
 // never advances its index — used where "always-on" isn't a sensible default
 // (e.g. the accent gate, where "off" needs to mean "no accents" rather than

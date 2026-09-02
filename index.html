@@ -80,7 +80,7 @@
     cursor: pointer; display: flex; align-items: center; justify-content: center;
   }
   .icon-btn:hover { background: rgba(60, 50, 40, 0.08); }
-  /* Mute Unsent / Mute All (prototype.md §15) — audio-only, independent of
+  /* Mute Unsent / Mute All — audio-only, independent of
      Pause; .active picks up a pastel fill so it reads at a glance which
      mute layer (if any) is currently engaged. */
   .icon-btn.active { background: var(--pastel-0); color: #5a2a2a; }
@@ -115,8 +115,8 @@
   }
 
   /* Wide, top-anchored sheet rather than a tall right-hand sidebar — this
-     panel is going to keep growing (default sizes now, per-instrument sound
-     design later per handoff.md), and rows of cards use the horizontal space
+     panel is going to keep growing (default sizes, per-instrument sound
+     design, and more), and rows of cards use the horizontal space
      a canvas app already has plenty of instead of turning into one long
      vertical scroll. */
   #systemMenu {
@@ -149,11 +149,25 @@
      two-per-row. */
   .menu-group-global { flex: 0 1 400px; max-width: 400px; min-width: 240px; }
   .menu-group-instruments { flex: 1; min-width: 0; }
-  .menu-group-title {
-    font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
-    color: var(--ink-dim); margin: 0 0 8px; padding-bottom: 6px;
+  .menu-group-title-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 8px; margin: 0 0 8px; padding-bottom: 6px;
     border-bottom: 1px solid var(--line);
   }
+  .menu-group-title {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--ink-dim); margin: 0;
+  }
+  /* Reset all (systemMenu.js) — text only, same row/height as the Global
+     title it sits beside, right-aligned. No pill chrome; this reads as a
+     link-like affordance, not a primary action. */
+  .menu-reset-btn {
+    background: none; border: none; padding: 0; margin: 0;
+    font-family: inherit; font-size: 11px; color: var(--ink-dim);
+    cursor: pointer; text-transform: none; letter-spacing: normal;
+    flex: none;
+  }
+  .menu-reset-btn:hover { color: #8a3b3b; text-decoration: underline; }
   /* Masonry via CSS multi-column rather than CSS Grid — a fixed row height
      (grid's default) wastes space under every short card whenever its row
      neighbor is tall; columns instead let each card sit directly under
@@ -225,7 +239,7 @@
 
   .hint { font-size: 9px; color: var(--ink-dim); line-height: 1.4; margin: 2px 0 6px; }
 
-  /* Piano note-picker (pitchBehavior 'piano', §16/handoff.md) — continuous
+  /* Piano note-picker (pitchBehavior 'piano') — continuous
      3-octave strip, 21 white keys laid out with flex so the whole thing
      scales with the popover's width; black keys absolutely positioned by
      percentage (objectPopover.js computes each one's left offset) rather
@@ -276,6 +290,7 @@
 </div>
 
 <div id="topBar">
+  <button id="clearAllBtn" class="pill danger" title="Remove every object from the canvas (undoable)">Clear all</button>
   <button id="muteUnsentBtn" class="icon-btn" title="Mute Unsent — silence the app, keep ES-9 output">🔈</button>
   <button id="muteAllBtn" class="icon-btn" title="Mute All — silence app + ES-9 output">🔇</button>
   <span class="mode-label">Clean</span>

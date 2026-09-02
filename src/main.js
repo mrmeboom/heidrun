@@ -1,4 +1,4 @@
-// Wires every module together — architecture.md §3. This is the only file
+// Wires every module together — architecture.md §10. This is the only file
 // that knows about all the layers at once; everything else only knows its
 // own slice.
 import {
@@ -19,8 +19,10 @@ import {
   setMuteUnsent,
   getMuteAll,
   setMuteAll,
+  clearObjects,
 } from './state/canvasState.js';
 import * as history from './state/history.js';
+import { loadAutosave, initAutosave } from './persistence/autosave.js';
 import { applyPhysicsSettings, stepPhysics } from './physics/world.js';
 import { writeBackDynamicPositions, getLiveBodyCount } from './physics/sync.js';
 import { onHit } from './physics/collisions.js';
@@ -43,6 +45,7 @@ const popoverRoot = document.getElementById('popoverRoot');
 const systemMenuPanel = document.getElementById('systemMenu');
 const hint = document.getElementById('audioHint');
 const pauseBtn = document.getElementById('pauseBtn');
+const clearAllBtn = document.getElementById('clearAllBtn');
 const muteUnsentBtn = document.getElementById('muteUnsentBtn');
 const muteAllBtn = document.getElementById('muteAllBtn');
 const modeToggle = document.getElementById('modeToggle');
@@ -66,7 +69,7 @@ applyLimiterSettings(getLimiterSettings());
 subscribe(() => applyLimiterSettings(getLimiterSettings()));
 
 // Mute Unsent mutes only the app's own local context; Mute All mutes that
-// plus the ES-9 context (prototype.md §15/handoff.md §5) — both audio-only,
+// plus the ES-9 context — both audio-only,
 // independent of Pause, so physics/spawning/ES-9 scheduling keep running and
 // un-muting never desyncs from anything else playing alongside the app.
 function applyMuteState() {
@@ -79,7 +82,7 @@ subscribe(applyMuteState);
 
 // Collision → hit → (hit-indexed gate) → sound. Bodies/sensors alike fire
 // this; a spawner or plain physics-only bouncer just has no sound module so
-// nothing happens (prototype.md §8.6). `field.sound` lives on the peg field
+// nothing happens. `field.sound` lives on the peg field
 // object itself (state/object.js's FieldModule), reusing the field's own
 // `sound`/`gate`/`accent` the same way `obj.sound` does for everything else
 // — so this reads `obj.sound` either way, no pegfield branch needed for the
@@ -142,7 +145,7 @@ onHit((hitId, _otherId, hitBody) => {
     }
   }
   const effectiveKey = effectiveKeyFor(sound);
-  // ES-9 routing (prototype.md §15) fires alongside the normal WebAudio
+  // ES-9 routing fires alongside the normal WebAudio
   // voice, except an 'audiosignal' line replaces local playback entirely —
   // that's the one case triggerEs9 reports back via suppressLocal, since
   // every other signal type (pitch/gate/adsr) is a control-only send that
@@ -183,7 +186,7 @@ function syncPauseButton() {
 pauseBtn.addEventListener('click', () => {
   const next = !getPaused();
   setPaused(next);
-  // Stuck-voltage safety (handoff.md §5) — Pause freezes everything else, so
+  // Stuck-voltage safety — Pause freezes everything else, so
   // any ES-9 gate/adsr line currently held high has nothing left to bring it
   // back down; force every channel to 0 immediately instead of leaving a
   // module gated open.
@@ -207,6 +210,15 @@ muteAllBtn.addEventListener('click', () => {
   syncMuteButtons();
 });
 syncMuteButtons();
+
+clearAllBtn.addEventListener('click', () => {
+  if (listObjects().length === 0) return;
+  if (!window.confirm('Clear the entire canvas? This can be undone with Cmd/Ctrl+Z.')) return;
+  clearObjects();
+  history.commit();
+  closePopover();
+  setSelectedId(null);
+});
 
 modeToggle.checked = getMode() === 'play';
 modeToggle.addEventListener('change', () => {
@@ -246,7 +258,9 @@ window.addEventListener('keydown', (e) => {
   setSelectedId(null);
 });
 
+loadAutosave();
 history.init();
+initAutosave();
 
 // Bounds are the fixed WORLD rect (render/camera.js), not the viewport —
 // since pan/zoom decoupled "on screen" from "in the world," a particle
@@ -257,7 +271,7 @@ function cleanupOffCanvas() {
   for (const obj of listObjects()) {
     if (obj.preset !== 'particle') continue;
     if (obj.x < WORLD.minX - margin || obj.x > WORLD.maxX + margin || obj.y < WORLD.minY - margin || obj.y > WORLD.maxY + margin) {
-      removeObject(obj.id); // cleanup only — never goes through undo history (architecture.md §3 particle lifecycle)
+      removeObject(obj.id); // cleanup only — never goes through undo history (architecture.md §2, particle lifecycle)
     }
   }
 }

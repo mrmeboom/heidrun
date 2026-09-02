@@ -4,6 +4,8 @@ A standalone browser instrument: a blank canvas of physics-driven objects (bounc
 
 No build step — plain ES modules, no bundler, no dependencies.
 
+Hardware CV/gate output is currently wired for an [Expert Sleepers ES-9](https://www.expert-sleepers.co.uk/es9.html) USB audio interface — feel free to tweak, adjust, expand, or refactor `src/es9/` to talk to whatever modules or instruments you've got instead.
+
 ## Running it
 
 ```bash
@@ -22,10 +24,8 @@ Runs the headless test suite (`node --test`) — generators/gate, state/undo/def
 
 ## Documentation
 
-- [`prototype.md`](prototype.md) — the concept: what this instrument is and how it's meant to feel to use.
-- [`architecture.md`](architecture.md) — the technical plan: module layout, data flow, object model, coding principles.
-- [`handoff.md`](handoff.md) — session-to-session status: what's built, what's not yet tested, open items.
-- [`ES-9-user-manual.md`](ES-9-user-manual.md) — using the ES-9 hardware CV/gate output.
+- [`architecture.md`](architecture.md) — what this is, how it feels to use, and how it's built: module layout, data flow, object model, coding principles.
+- [`NOTES.md`](NOTES.md) — known limitations, deliberate trade-offs, open design questions.
 
 ## License
 

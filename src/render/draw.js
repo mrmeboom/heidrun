@@ -1,5 +1,5 @@
 // Per-frame canvas 2D draw — reads state (+ live physics positions already
-// written back into it) and paints; never mutates state (architecture.md §3).
+// written back into it) and paints; never mutates state (architecture.md §10).
 import { listObjects, getPalette, getMode } from '../state/canvasState.js';
 import { colorForObject } from './palette.js';
 import { getCamera, WORLD } from './camera.js';
@@ -9,8 +9,8 @@ function isRectShape(obj) {
   return RECT_SHAPES.has(obj.shape);
 }
 /** Axis-aligned half-width/height, ignoring rotation — same simplification
- * hitTestBody and the resize handle already make for rect shapes (handoff.md
- * §5's "known, accepted wrinkle"), reused by interaction.js's marquee-select
+ * hitTestBody and the resize handle already make for rect shapes (a known,
+ * accepted wrinkle), reused by interaction.js's marquee-select
  * so a rotated object's selection box matches what you'd already expect from
  * clicking/dragging its handles. */
 export function halfExtents(obj) {

@@ -1,4 +1,4 @@
-// Single source of truth for the canvas — architecture.md §6. Every mutation
+// Single source of truth for the canvas — architecture.md §10. Every mutation
 // goes through these setters; nothing else reaches into the object map directly.
 // Physics bodies, audio nodes, rendered pixels, undo snapshots, and localStorage
 // saves are all derived from this, never the other way around.
@@ -8,13 +8,15 @@ import { noteNameToMidi, quantizeToScale } from '../audio/theory.js';
 const objects = new Map();
 
 /** @type {{ background: string, pastels: string[] }} */
-let palette = {
+const FACTORY_PALETTE = {
   background: '#f3ead9',
   pastels: ['#f4a3a3', '#f7c98a', '#f6e28a', '#a8d8b9', '#9fc9e8', '#c6a8e0'],
 };
+let palette = structuredClone(FACTORY_PALETTE);
 
 /** @type {{ note: string, octave: number, mode: string }} */
-let globalKey = { note: 'C', octave: 4, mode: 'major' };
+const FACTORY_GLOBAL_KEY = { note: 'C', octave: 4, mode: 'major' };
+let globalKey = structuredClone(FACTORY_GLOBAL_KEY);
 
 /** @type {{ gravity: number, restitution: number, friction: number, airFriction: number, objectCapEnabled: boolean, objectCap: number }} */
 // objectCapEnabled/objectCap (off by default): a hard ceiling on live physics
@@ -28,30 +30,31 @@ let globalKey = { note: 'C', octave: 4, mode: 'major' };
 // concurrent audio voices), which correlates with body count only when
 // particles are concentrated (e.g. funneled through the same couple of
 // bouncers) rather than spread across a wide field. So this cap is an opt-in
-// failsafe for anyone who wants a hard ceiling, not a default limit — see
-// prototype.md §16.
-let physicsSettings = { gravity: 1, restitution: 0.7, friction: 0.05, airFriction: 0.001, objectCapEnabled: false, objectCap: 100 };
+// failsafe for anyone who wants a hard ceiling, not a default limit.
+const FACTORY_PHYSICS_SETTINGS = { gravity: 1, restitution: 0.7, friction: 0.05, airFriction: 0.001, objectCapEnabled: false, objectCap: 100 };
+let physicsSettings = structuredClone(FACTORY_PHYSICS_SETTINGS);
 
 // Output limiter (brickwall-ish compressor sitting after the master bus,
 // audio/context.js) — protects ears/downstream gear from a burst of
 // simultaneous voices summing into clipping. On by default; adjustable or
 // removable, at the user's own risk, since turning it off or raising the
 // ceiling can genuinely put unattenuated audio out the output.
-let limiterSettings = { enabled: true, ceiling: -3 };
+const FACTORY_LIMITER_SETTINGS = { enabled: true, ceiling: -3 };
+let limiterSettings = structuredClone(FACTORY_LIMITER_SETTINGS);
 
-// Defaults applied to a freshly-placed object of each preset (prototype.md
-// §2 — "not yet built" until now). A placement tool merges these in ahead of
+// Defaults applied to a freshly-placed object of each preset. A placement
+// tool merges these in ahead of
 // its own factory defaults, so changing a value here only affects objects
 // placed from that point forward, never anything already on the canvas.
-let objectDefaults = {
+const FACTORY_OBJECT_DEFAULTS = {
   bouncer: { shape: 'circle', size: 80 },
   trigger: { shape: 'square', size: 80 },
   spawner: { shape: 'asterisk', size: 80 },
   pegfield: { width: 240, height: 240, spacing: 80, pegRadius: 10 },
 };
+let objectDefaults = structuredClone(FACTORY_OBJECT_DEFAULTS);
 
-// Global, per-instrument sound-design knobs (handoff.md's old "not yet
-// built" §3 item) — deliberately global-only, not per-object: this is a
+// Global, per-instrument sound-design knobs — deliberately global-only, not per-object: this is a
 // WebAudio prototyping/preview layer standing in for the eventual modular-
 // synth CV/gate output, so "make the kick punchier for the whole patch" is
 // the actual use case, not per-bouncer overrides. Kick/snare/hat share
@@ -69,7 +72,7 @@ let objectDefaults = {
 // sounded like before this existed (bass's `filterEnvDepth`, melody's
 // `unisonDetune`/`unisonMix`, and each voice's own original attack/release
 // timing).
-let instrumentSettings = {
+const FACTORY_INSTRUMENT_SETTINGS = {
   kick: { decay: 1, tone: 1, pitch: 1 },
   snare: { decay: 1, tone: 1, pitch: 1 },
   hat: { decay: 1, tone: 1, pitch: 1 },
@@ -101,6 +104,7 @@ let instrumentSettings = {
     noiseMix: 0,
   },
 };
+let instrumentSettings = structuredClone(FACTORY_INSTRUMENT_SETTINGS);
 
 let mode = 'build'; // 'build' | 'play'
 
@@ -108,7 +112,7 @@ let mode = 'build'; // 'build' | 'play'
 // before the user is ready — see the "pause" feedback thread.
 let paused = true;
 
-// Two independent, audio-only mute layers (prototype.md §15/handoff.md §5) —
+// Two independent, audio-only mute layers —
 // deliberately not the same as Pause, which also freezes physics/spawning and
 // so would desync timing against anything else playing alongside the app.
 // muteUnsent mutes only the app's own local AudioContext (audio/context.js) —
@@ -121,7 +125,7 @@ let muteAll = false;
 
 const listeners = new Set();
 function notify() {
-  // Keep piano note-picker selections (architecture.md §6) in sync with whatever
+  // Keep piano note-picker selections (architecture.md §10) in sync with whatever
   // mode is currently effective for each sound module, before anything reads
   // state off the back of this notify — catches every path uniformly (global
   // key edits, per-object overrides, project load/import, undo/redo,
@@ -300,6 +304,25 @@ export function setMuteAll(next) {
 }
 export function getMuteAll() {
   return muteAll;
+}
+
+/**
+ * "Reset all" — reverts every global setting
+ * (palette, key/mode, physics, per-class object defaults, instrument sound
+ * design, limiter) back to its hardcoded factory value. Deliberately leaves
+ * `objects` untouched — wiping the canvas is "Clear all"'s job, not this
+ * one's — so a project with tuned settings but factory-fresh objects isn't
+ * possible to reach any other way once autosave means those tweaks now
+ * survive a reload on their own.
+ */
+export function resetSettingsToDefaults() {
+  palette = structuredClone(FACTORY_PALETTE);
+  globalKey = structuredClone(FACTORY_GLOBAL_KEY);
+  physicsSettings = structuredClone(FACTORY_PHYSICS_SETTINGS);
+  objectDefaults = structuredClone(FACTORY_OBJECT_DEFAULTS);
+  instrumentSettings = structuredClone(FACTORY_INSTRUMENT_SETTINGS);
+  limiterSettings = structuredClone(FACTORY_LIMITER_SETTINGS);
+  notify();
 }
 
 export function serialize() {

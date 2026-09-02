@@ -1,8 +1,8 @@
-// State Object ⇄ Matter body — architecture.md §2. Bodies are always derived
+// State Object ⇄ Matter body — architecture.md §10. Bodies are always derived
 // from state and safe to throw away/rebuild (same pattern input.html already
 // uses for rebuildPegs()/rebuildWalls()), never the other way around, except
 // for dynamic (particle) bodies where physics owns position each frame and we
-// write that back into state (§3 of architecture.md).
+// write that back into state (§10 of architecture.md).
 import { world } from './world.js';
 import { listObjects, subscribe, getPhysicsSettings } from '../state/canvasState.js';
 
@@ -41,7 +41,7 @@ function makeBody(obj) {
       break;
     case 'asterisk':
       // Visual is an asterisk sprite; physics body is a smaller circle — shapes
-      // are deliberately decoupled for performance (architecture.md §1).
+      // are deliberately decoupled for performance (architecture.md §11).
       body = Bodies.circle(obj.x, obj.y, half * 0.55, opts);
       break;
     case 'circle':
@@ -86,7 +86,7 @@ function needsRebuild(entry, obj) {
 }
 
 /**
- * Peg field: one object, many peg bodies (prototype.md §4 "cluster object").
+ * Peg field: one object, many peg bodies (a "cluster object").
  * Pegs sit on a hex grid inside the object's own width/height box (x/y is the
  * box's center, same convention as every other object) — same
  * spacing/√3-row-height math as input.html's rebuildPegs(), just centered
@@ -239,7 +239,7 @@ export function getBody(id) {
 
 /** Total live Matter bodies across every entry — a peg field counts every
  * individual peg, not once per field, since peg count is exactly what makes
- * a dense field expensive (physics stepping cost, prototype.md §11). Backs
+ * a dense field expensive (physics stepping cost). Backs
  * both the toolbar's live counter and the physics card's object cap. */
 export function getLiveBodyCount() {
   let count = 0;

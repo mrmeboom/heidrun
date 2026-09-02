@@ -1,6 +1,6 @@
 // Pointer events → drag/resize/rotate/place → state mutations. This is the
 // only place UI code is allowed to touch object transforms directly, and it
-// always goes through canvasState's own setters (architecture.md §6).
+// always goes through canvasState's own setters (architecture.md §10).
 import { listObjects, addObject, updateObject, getObject, getObjectDefaults } from '../state/canvasState.js';
 import { createBouncer, createTrigger, createSpawner, createPegField, duplicateObject } from '../state/object.js';
 import { getHandlePositions, hitTestBody, halfExtents } from '../render/draw.js';

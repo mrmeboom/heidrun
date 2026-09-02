@@ -1,6 +1,6 @@
 // Shared "play this now-ish" entry point — resolves pitch/chord via theory.js
 // and dispatches to the instrument's voice module, scheduled against
-// audioCtx.currentTime rather than wall-clock (architecture.md §3).
+// audioCtx.currentTime rather than wall-clock (architecture.md §6).
 import { getAudioContext } from './context.js';
 import { playKick } from './voices/kick.js';
 import { playSnare } from './voices/snare.js';

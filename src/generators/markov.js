@@ -1,5 +1,5 @@
 // Simplest possible Markov chain — 2 states (on/off), order 1. Not a lesser version
-// of "real" Markov logic, it's the cheapest legitimate instance of it (prototype.md §8.4.3).
+// of "real" Markov logic, it's the cheapest legitimate instance of it.
 
 /**
  * @param {{ stayOnProb?: number, turnOnProb?: number, seed?: number }} config

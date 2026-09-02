@@ -1,8 +1,8 @@
-// Per-object ES-9 routing (prototype.md §15) — resolves a sound module's
+// Per-object ES-9 routing — resolves a sound module's
 // routing lines to actual channel voltages/audio on hit. Pure decision logic
 // (glide, gate duration, patched-channel accounting) is exported separately
 // from `triggerEs9` so it's testable without a real AudioContext
-// (architecture.md §7).
+// (architecture.md §13).
 import { resolveFrequency } from '../audio/theory.js';
 import { frequencyToMidi } from '../audio/theory.js';
 import {
@@ -16,10 +16,10 @@ import {
 } from './context.js';
 
 const LOOKAHEAD = 0.01; // matches audio/scheduleNote.js
-const PITCH_SETTLE = 0.003; // pitch must be stable before the gate's rising edge (handoff.md §5)
+const PITCH_SETTLE = 0.003; // pitch must be stable before the gate's rising edge
 
 /**
- * 303-style auto-glide (prototype.md §15): legato/staccato are unconditional,
+ * 303-style auto-glide: legato/staccato are unconditional,
  * 'auto' glides only if the channel's previous note is still gated/enveloping
  * when this one fires.
  */
@@ -31,7 +31,6 @@ export function decideGlide(channelActive, glideMode) {
 
 /**
  * Gate/adsr high-duration, reusing the object's own internal ADSR
- * (handoff.md §5 — "just use the app's internal ADSR for gate timing")
  * instead of a separate gate-length control: Attack→Decay→Sustain-hold for
  * the deep tier (bass/pad/melody), or a short decay-scaled pulse for the
  * baseline percussive tier (kick/snare/hat), which has no attack/sustain of
@@ -57,7 +56,7 @@ function collectEs9Lines(sound, used) {
   for (const line of sound.es9.lines) used.add(line.channel);
 }
 
-/** "x/8 channels patched" readout (prototype.md §15) — every object with an
+/** "x/8 channels patched" readout — every object with an
  * enabled ES-9 module contributes its lines' channels, deduplicated (shared
  * channels count once). */
 export function patchedChannelSummary(objects) {
@@ -72,7 +71,7 @@ export function patchedChannelSummary(objects) {
 
 /** channel (1-8) -> { activeUntil: audioCtx-time, lastObjectId } for gate/adsr
  * lines, and channel -> last audiosignal GainNode, so a new note can steal
- * cleanly (prototype.md §15's monophonic voice-stealing). Module-level since
+ * cleanly (monophonic voice-stealing). Module-level since
  * a channel is a real shared physical wire, not owned by any one object. */
 const gateChannelState = new Map();
 const audioSignalVoices = new Map();
@@ -178,7 +177,7 @@ function scheduleAudioSignal(line, midiNote, now, instrumentSettings) {
 /**
  * Called from main.js's onHit handler alongside (or instead of) scheduleNote.
  * Returns `{ suppressLocal }` — true when an 'audiosignal' line fired, since
- * that line replaces the object's normal local playback (prototype.md §15);
+ * that line replaces the object's normal local playback;
  * pitch/gate/adsr-only routing never suppresses local playback.
  */
 export function triggerEs9(sound, effectiveKey, { positionIndex = 0, accented = false, instrumentSettings = {} } = {}) {

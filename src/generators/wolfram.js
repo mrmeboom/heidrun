@@ -1,6 +1,6 @@
 // Elementary cellular automaton (rule 30/90/110/150 etc.), row held in a 32-bit
 // integer, one bit per cell, edges wrapped circularly. Cheap: a fixed 32-iteration
-// step regardless of what's asked of it — see prototype.md §8.4.5.
+// step regardless of what's asked of it.
 
 const WIDTH = 32;
 

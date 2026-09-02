@@ -1,5 +1,5 @@
 // Hamburger menu — strictly global/system settings, nothing tied to a single
-// object (prototype.md §2): palette, global key/mode, global physics,
+// object: palette, global key/mode, global physics,
 // default sizes, build/play toggle, undo/redo, and the project manager.
 // Rendered as a wide top-anchored sheet of cards (menu-grid, index.html)
 // rather than a tall sidebar — see the `card()` helper below for why.
@@ -17,6 +17,7 @@ import {
   getLimiterSettings,
   setLimiterSettings,
   listObjects,
+  resetSettingsToDefaults,
 } from '../state/canvasState.js';
 import { SCALE_NAMES, NOTE_NAMES, OCTAVES } from '../audio/theory.js';
 import { SHAPES } from '../state/object.js';
@@ -55,13 +56,17 @@ function card(title, { wide = false } = {}) {
  * width and inner grid can be styled independently (index.html). Returns the
  * inner grid to append cards to.
  */
-function group(title, parent, extraClass) {
+function group(title, parent, extraClass, actionEl) {
   const wrap = document.createElement('div');
   wrap.className = extraClass ? `menu-group ${extraClass}` : 'menu-group';
+  const titleRow = document.createElement('div');
+  titleRow.className = 'menu-group-title-row';
   const h = document.createElement('h2');
   h.className = 'menu-group-title';
   h.textContent = title;
-  wrap.appendChild(h);
+  titleRow.appendChild(h);
+  if (actionEl) titleRow.appendChild(actionEl);
+  wrap.appendChild(titleRow);
   const grid = document.createElement('div');
   grid.className = 'menu-grid';
   wrap.appendChild(grid);
@@ -165,7 +170,22 @@ function render(onModeChange) {
   // building code below still fills each one in through its own variable,
   // wherever that happens to sit in the file.
   const instGrid = group('Instruments', columns, 'menu-group-instruments');
-  const grid = group('Global', columns, 'menu-group-global');
+
+  // "Reset all" — settings only, not the canvas
+  // (that's Clear all's job, in the top bar). Confirm + a single undo step,
+  // same treatment as Clear all, since autosave now means a tuned setting
+  // otherwise has no way back to factory without this.
+  const resetBtn = document.createElement('button');
+  resetBtn.className = 'menu-reset-btn';
+  resetBtn.textContent = 'Reset all';
+  resetBtn.title = 'Reset every Global/Instruments setting to its factory default (undoable)';
+  resetBtn.addEventListener('click', () => {
+    if (!window.confirm('Reset all settings to factory defaults? This can be undone with Cmd/Ctrl+Z.')) return;
+    resetSettingsToDefaults();
+    history.commit();
+    render(onModeChange);
+  });
+  const grid = group('Global', columns, 'menu-group-global', resetBtn);
 
   const undoCard = card('Undo / redo');
   const undoRow = document.createElement('div');
@@ -355,7 +375,7 @@ function render(onModeChange) {
   copyBtn.addEventListener('click', () => navigator.clipboard.writeText(textarea.value));
   const loadBtn = document.createElement('button');
   loadBtn.className = 'pill';
-  loadBtn.textContent = 'Load pasted JSON';
+  loadBtn.textContent = 'Load pasted';
   loadBtn.addEventListener('click', () => {
     try {
       jsonIO.importJSON(textarea.value);
@@ -377,7 +397,7 @@ function render(onModeChange) {
     instGrid.appendChild(deepInstrumentCard(instrument));
   }
 
-  // Lands in Instruments, not Global, purely for space (handoff.md §5) — the
+  // Lands in Instruments, not Global, purely for space — the
   // Global drawer is already nearly full and this card needs more room than
   // it has to spare; conceptually it's a hardware/global concern like the
   // Limiter card, not a per-voice one.
@@ -387,7 +407,7 @@ function render(onModeChange) {
 let es9DeviceOptions = [];
 
 /**
- * ES-9 connect + routing overview (prototype.md §15). Connection is a
+ * ES-9 connect + routing overview. Connection is a
  * user-gesture-gated flow (scan → pick device → connect), same shape as the
  * recovered test.html rig, opened on its own dedicated AudioContext
  * (es9/context.js) — entirely separate from the app's normal listening
@@ -505,8 +525,7 @@ function baselineInstrumentCard(instrument) {
 }
 
 /**
- * Bass/pad/melody — the deep tier (handoff.md's instrument-settings
- * discussion): a full ADSR-shaped amplitude envelope (Attack/Decay/Sustain
+ * Bass/pad/melody — the deep tier: a full ADSR-shaped amplitude envelope (Attack/Decay/Sustain
  * level/Sustain time/Release — see the voice modules for why Sustain time
  * exists on top of a normal ADSR: every note here is a one-shot
  * physics-triggered hit, not a held key, so there's no real note-off to
@@ -519,8 +538,8 @@ function baselineInstrumentCard(instrument) {
  * oscillator. Same rows for all three so the pattern reads the same across
  * cards; `subLevel` row only appears where the settings object actually has
  * it (bass), rather than a per-instrument flag. No octave/pitch knob here —
- * that duplicated the per-object key-override octave once that landed
- * (handoff.md §3), so it was removed; `settings.pitch` stays a valid
+ * that duplicated the per-object key-override octave once that landed,
+ * so it was removed; `settings.pitch` stays a valid
  * (always-0-from-here-on, unless an old save set it) field the voices still
  * read, just no longer UI-exposed.
  */

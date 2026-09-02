@@ -1,6 +1,6 @@
 // Euclidean rhythm (Bjorklund's algorithm) — distributes `hits` pulses as evenly
 // as possible across `steps` slots, plus a rotation for phase offset. Computed
-// once per parameter change, then a pure lookup — prototype.md §8.3 / §8.4.6.
+// once per parameter change, then a pure lookup.
 
 export function bjorklund(hits, steps) {
   if (steps <= 0) return [];

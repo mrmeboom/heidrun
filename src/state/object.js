@@ -1,5 +1,5 @@
-// The one generic Object record + preset factories — architecture.md §4,
-// prototype.md §4. No class hierarchy: "Bouncer"/"Trigger"/"Spawner" are just
+// The one generic Object record + preset factories — architecture.md §2.
+// No class hierarchy: "Bouncer"/"Trigger"/"Spawner" are just
 // different starting module values on the same shape.
 
 let counter = 0;
@@ -38,7 +38,7 @@ function createGate(type = null, config = {}) {
  * @property {number} channel  1–8, which ES-9 Eurorack jack this line drives
  *   (architecture.md's es9/context.js maps this to the ES-9's actual
  *   DC-coupled device channels 9–16). Channels are not exclusive — the same
- *   channel can be picked by several lines/objects at once, prototype.md §15.
+ *   channel can be picked by several lines/objects at once.
  * @property {'pitch'|'gate'|'adsr'|'audiosignal'} signal
  *   pitch: 1V/oct CV of this object's resolved note. gate: on/off, high for
  *   this object's own internal ADSR duration (Attack→Decay→Sustain-hold).
@@ -53,7 +53,7 @@ function createGate(type = null, config = {}) {
  * @property {boolean} enabled
  * @property {Es9RoutingLine[]} lines
  * @property {'legato'|'staccato'|'auto'} glideMode
- *   Per-object (prototype.md §15) — applies whenever this object's own note
+ *   Per-object — applies whenever this object's own note
  *   steals a channel, regardless of which object held it before. 'auto' is
  *   303-style: glide+legato only if the channel's previous note is still
  *   gated/enveloping when this one fires, staccato retrigger otherwise.
@@ -96,7 +96,7 @@ export function createEs9Module(overrides = {}) {
  *   bounce at the ends instead of wrapping. Own cursor state
  *   (`_pianoCursor`/`_pianoDirection`), separate from `up`/`down`'s `_cursor`
  *   since bounce needs to remember direction and wrap doesn't.
- * @property {GateConfig} gate   hit-indexed (prototype.md §8.6), default always-on — gate.index doubles as the hit counter
+ * @property {GateConfig} gate   hit-indexed, default always-on — gate.index doubles as the hit counter
  * @property {{ auto: boolean, complexity: 'triad'|'seventh'|'extended' }} chord
  *   Pad only. The root is always resolved via `pitchBehavior` above, same as
  *   every other voice — `auto` doesn't gate that, it only decides whether
@@ -107,7 +107,7 @@ export function createEs9Module(overrides = {}) {
  *   in-key in this app regardless of pitch source, matching every other
  *   pitch behavior's chords, which were already scale-relative.
  * @property {number} sendReverb  @property {number} sendDelay
- * @property {Es9Module} es9  hardware routing, prototype.md §15 — needs a sound module to exist (see createEs9Module)
+ * @property {Es9Module} es9  hardware routing — needs a sound module to exist (see createEs9Module)
  * @property {{ gate: GateConfig, pitchBehavior: string, fixedDegree: number, pitchRange: number, pianoCycle: string }} accent
  *   Evaluated only on notes that already sound (after `gate` passes) — when it
  *   fires, this pitch behavior replaces the normal one for that one note
@@ -156,7 +156,7 @@ export function createSoundModule(overrides = {}) {
  *   same as a bouncer with Sound off — the template below is kept either way so toggling doesn't lose settings
  * @property {SoundModule} particleSound  stamped onto every emitted particle (cloned fresh — each particle
  *   gets its own live, independently-accumulating gate/accent, exactly like any other object)
- * @property {GateConfig} gate   caches the active math-generator instance (clock/transport.js owns the actual indexing — prototype.md §8.6)
+ * @property {GateConfig} gate   caches the active math-generator instance (clock/transport.js owns the actual indexing)
  */
 export function createSpawnModule(overrides = {}) {
   return {
@@ -185,8 +185,8 @@ export function createSpawnModule(overrides = {}) {
  * @property {number} spacing    peg-to-peg distance; also drives row height (spacing * sqrt(3)/2, hex packing)
  * @property {number} pegRadius
  * @property {SoundModule|null} sound  field-level, shared by every peg — one instrument/gate/accent for
- *   the whole field (prototype.md §4/§13: "one shared hit-counter across all pegs in the field, not one
- *   per peg"), which falls out for free from every peg body sharing the field object's own heidrunId.
+ *   the whole field — one shared hit-counter across all pegs in the field, not one
+ *   per peg — which falls out for free from every peg body sharing the field object's own heidrunId.
  * @property {'up'|'down'|'left'|'right'|'random'} pitchMode  how a peg hit resolves to a scale degree —
  *   main.js turns this into `sound.pitchBehavior`/`positionIndex` per hit using the struck peg's own
  *   position, normalized against the field's current bounds (0 at one edge, 1 at the other — NOT an
@@ -287,14 +287,14 @@ export function createSpawner({ x = 0, y = 0, shape = 'asterisk', size = 80 } = 
 }
 
 /**
- * Plinko peg field (prototype.md §4) — one HeidrunObject, many derived peg
+ * Plinko peg field — one HeidrunObject, many derived peg
  * bodies (physics/sync.js expands it). `shape: 'square'` deliberately reuses
  * the existing rect-shape move/resize/hit-test math as-is (x/y stay the
  * *center* of the field, same convention as every other object, half-extents
  * from width/height) — a peg field is just a box whose interior auto-fills
  * with pegs on a hex grid, so it gets that behavior for free instead of a
  * parallel implementation. No `sound` module yet — field-level pitch
- * behavior/gate is a deliberately separate follow-up (handoff.md).
+ * behavior/gate is a deliberately separate follow-up.
  */
 export function createPegField({ x = 0, y = 0, width = 240, height = 240, spacing = 80, pegRadius = 10 } = {}) {
   return createObject({
@@ -335,7 +335,7 @@ export function createParticle(spawnerObject) {
   });
 }
 
-/** Alt-drag duplication (prototype.md-adjacent UI feedback) — same shape, fresh id, dropped in place. */
+/** Alt-drag duplication — same shape, fresh id, dropped in place. */
 export function duplicateObject(obj) {
   const clone = JSON.parse(JSON.stringify(obj));
   clone.id = generateId(obj.preset);

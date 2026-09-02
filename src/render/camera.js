@@ -1,6 +1,5 @@
 // Pan/zoom view state — a screen-space viewport into a fixed, generous world
-// rect that objects live in (handoff.md §3's "canvas is viewport-bounded"
-// gap). Deliberately NOT part of canvasState: this is pure view state, not
+// rect that objects live in. Deliberately NOT part of canvasState: this is pure view state, not
 // canvas data — it isn't serialized, isn't undo-tracked, and changes on
 // every wheel tick or pan-drag frame, which would be wasteful to route
 // through notify() (physics reconcile, piano requantize, etc. all listen
@@ -8,7 +7,7 @@
 //
 // World is fixed and finite, not infinite — an unbounded canvas paired with
 // an unbounded peg field lets someone build a patch that quietly grinds the
-// browser to a halt. prototype.md §11's live-body/voice-count target (and
+// browser to a halt. The live-body/voice-count target (and
 // the object cap in the physics card) is the real backstop against that;
 // this just keeps the world (and therefore off-canvas particle despawn,
 // main.js's cleanupOffCanvas) a well-defined, generous rectangle rather than

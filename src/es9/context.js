@@ -1,8 +1,8 @@
 // Dedicated AudioContext for ES-9 hardware output — kept entirely separate
-// from audio/context.js's normal-listening context (prototype.md §15,
-// handoff.md §5: "two separate contexts", decided over a single shared one so
-// disconnecting/muting the ES-9 side never touches what you hear on your own
-// speakers). Mirrors test.html's recovered test-rig approach: a
+// from audio/context.js's normal-listening context — two separate contexts,
+// decided over a single shared one so disconnecting/muting the ES-9 side
+// never touches what you hear on your own speakers. Mirrors test.html's
+// test-rig approach: a
 // ChannelMergerNode routed to a chosen output device via setSinkId, with
 // pitch/gate/adsr as ConstantSourceNode DC offsets. Of the ES-9's 16 device
 // channels only 8 (its DC-coupled 3.5mm Eurorack jacks, device channels
@@ -23,7 +23,7 @@ let connected = false;
 /** One ConstantSourceNode per channel — the shared "physical wire" every
  * pitch/gate/adsr line for that channel writes to (last-write-wins, since a
  * channel is genuinely one voltage regardless of how many objects target it
- * — prototype.md §15's "not exclusive" call). */
+ * — the deliberate "not exclusive" call). */
 let channelLanes = [];
 
 let calibration = { fsVolts: 10, gateVolts: 8, rootMidi: 60 };
@@ -136,14 +136,14 @@ export function getChannelCount() {
   return CHANNEL_COUNT;
 }
 
-/** Mute All's ES-9-side half (prototype.md §15) — zeroes final output but
+/** Mute All's ES-9-side half — zeroes final output but
  * leaves every ConstantSourceNode/schedule running, so un-muting resumes in
  * phase instead of re-triggering anything. */
 export function setEs9Muted(muted) {
   if (muteGain) muteGain.gain.value = muted ? 0 : 1;
 }
 
-/** Stuck-voltage safety (handoff.md §5 "yes" to this) — forces every
+/** Stuck-voltage safety — forces every
  * channel's voltage to 0 immediately. Called on Pause and Mute All so nothing
  * is ever left driving a gate/CV open indefinitely. */
 export function allChannelsLow() {

@@ -1,5 +1,5 @@
-// The per-object "+" inline settings popover — build mode only (prototype.md
-// §2). Every field commits on change (select/checkbox/number-blur/cycler
+// The per-object "+" inline settings popover — build mode only. Every field
+// commits on change (select/checkbox/number-blur/cycler
 // click), never on every keystroke, so the panel is safe to fully re-render
 // after each commit without fighting focus.
 import { getObject, updateObject, removeObject } from '../state/canvasState.js';
@@ -194,8 +194,8 @@ function resizeSteps(oldSteps, newLen) {
 /**
  * Shared by spawn beat-select's manual pattern and a sound module's manual
  * hit-gate. `computeLength(resolution)` decides the grid length — for a
- * spawner that's numerator-scaled (prototype.md's "beat 1 and 3" needs to
- * mean actual beats); a hit-gate has no meter to scale against, so its grid
+ * spawner that's numerator-scaled ("beat 1 and 3" needs to mean actual
+ * beats); a hit-gate has no meter to scale against, so its grid
  * length is just the resolution itself.
  */
 function manualPatternFields(parent, manual, computeLength, onChange) {
@@ -232,7 +232,7 @@ const BEAT_SELECT_OPTIONS = [
 
 // 'positional' is deliberately not offered here — it's a real pitchBehavior
 // value in theory.js, but it only means something when main.js supplies a
-// live positionIndex from a peg-field hit (prototype.md §4). Peg fields don't
+// live positionIndex from a peg-field hit. Peg fields don't
 // even use this list — they get their own "Field pitch" selector
 // (FIELD_PITCH_OPTIONS) below. Selecting 'positional' on any other object
 // left positionIndex at scheduleNote's default of 0 forever, so it silently
@@ -255,7 +255,7 @@ const PIANO_CYCLE_OPTIONS = [
   { value: 'random', label: 'Random' },
 ];
 
-// Piano note-picker (pitchBehavior 'piano', prototype.md §7) — a continuous
+// Piano note-picker (pitchBehavior 'piano') — a continuous
 // 3-octave strip (36 keys), offset 0 = leftmost key = the object's own
 // effective root, so lowering the root's octave visibly (and audibly) slides
 // the whole strip down together. Chromatic — picking a passing tone outside
@@ -311,7 +311,7 @@ const GATE_TYPE_OPTIONS = [{ value: '', label: 'Always on' }, { value: 'manual',
 // a useful default, but is still offered for anyone who wants it).
 const ACCENT_GATE_TYPE_OPTIONS = [{ value: 'off', label: 'Off' }, ...GATE_TYPE_OPTIONS];
 
-// Peg field only (prototype.md §4) — replaces the normal Pitch selector.
+// Peg field only — replaces the normal Pitch selector.
 // Up/Down/Left/Right map a struck peg's own position (normalized against the
 // field's bounds, not a peg count) onto Range — 'Up' means the field's top
 // edge is the lowest note and the bottom is the highest, so a particle
@@ -340,13 +340,13 @@ const ES9_GLIDE_OPTIONS = [
 const ES9_CHANNELS = [1, 2, 3, 4, 5, 6, 7, 8];
 
 /**
- * Hardware routing (prototype.md §15) — lives inside the sound module itself
+ * Hardware routing — lives inside the sound module itself
  * so it works identically wherever buildSoundFields is called (a plain
  * object's `sound`, a peg field's `field.sound`, a spawner's
  * `spawn.particleSound`), no special-casing per call site. Each line is a
  * channel (1–8, not exclusive — several lines/objects can share one, that's
  * deliberate) + signal type; gate/adsr's actual on-wire duration reuses this
- * object's own instrument ADSR (handoff.md §5), so there's no separate
+ * object's own instrument ADSR, so there's no separate
  * gate-length control here. Glide is per-object (the winning note's own
  * setting applies whenever it steals a channel from something else).
  */
@@ -663,8 +663,7 @@ function render(screenPos) {
   }
   if (isPegField) {
     // Field-level sound lives on `field.sound`, not `obj.sound` — one shared
-    // instrument/gate/accent for the whole field (prototype.md §4/§13),
-    // which every peg hit routes back to since all pegs share the field
+    // instrument/gate/accent for the whole field, which every peg hit routes back to since all pegs share the field
     // object's own id.
     panel.appendChild(toggleRow('Sound', !!obj.field.sound, (v) => patchField({ sound: v ? createSoundModule() : null })));
   }

@@ -1,6 +1,6 @@
 // Undo/redo — a capped ring buffer of full serialized snapshots rather than a
 // diff/command system: layouts are small JSON, so snapshotting the whole thing
-// per meaningful edit is cheap and far less code (prototype.md §12).
+// per meaningful edit is cheap and far less code.
 import { serialize, deserialize } from './canvasState.js';
 
 const MAX_STEPS = 50;

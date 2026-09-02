@@ -1,4 +1,4 @@
-// Global BPM transport — spawn modules only (prototype.md §8.1/§8.6).
+// Global BPM transport — spawn modules only.
 //
 // Every spawner reads the SAME shared `clockSeconds` timeline (frozen while
 // paused, per architecture.md's pause design). A spawner's bar-start is
@@ -119,7 +119,7 @@ function landInCurrentBar(spawn, { isFirstAnchor }) {
  * Time spent off, a meter changed mid-bar, a laggy/backgrounded frame — none
  * of it gets "remembered" as a debt to catch up on. A gap just gets skipped,
  * never replayed — deliberately traded for "no burst, ever," over "every
- * historical tick eventually plays." See handoff.md for the reasoning; this
+ * historical tick eventually plays." This
  * replaced an earlier while-loop-with-a-64-iteration-cap version that could
  * still dump a real burst of particles in one frame when an anchor went
  * stale (from a spawner sitting off for a while, in particular).

@@ -1,6 +1,6 @@
 // Theme — cream background + a small pastel set, applied as CSS custom
 // properties so pill/DOM UI and canvas drawing derive from the same source
-// (prototype.md §3). Editable from the system menu.
+// Editable from the system menu.
 import { getPalette } from '../state/canvasState.js';
 
 export function applyPaletteToCSS() {

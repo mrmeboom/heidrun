@@ -6,7 +6,7 @@ import { noiseBuffer } from './noise.js';
  * deepest of the three scale-resolved voices, "sub" included per feedback):
  * `tone`/`pitch` plus a full ADSR-shaped amplitude envelope (`attack`/
  * `decay`/`sustainLevel`/`sustainTime`/`release`) are the shared baseline
- * (§ handoff.md); everything from `waveform` down is bass-specific sound
+ * across bass/pad/melody; everything from `waveform` down is bass-specific sound
  * design, all still just standard WebAudio nodes — no new dependency.
  * - Envelope: every note here is a physics-triggered one-shot "plonk," not a
  *   held key, so there's no real note-off for a normal ADSR's Sustain stage

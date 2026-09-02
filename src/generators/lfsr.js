@@ -1,6 +1,6 @@
 // 16-bit Fibonacci LFSR, taps at bits 16,15,13,4 (a maximal-length polynomial) —
 // classic cheap pseudo-random bit stream, the trick chiptune hardware used for
-// noise/hats (prototype.md §8.4.4).
+// noise/hats.
 
 const DEFAULT_SEED = 0xace1;
 

@@ -1,5 +1,5 @@
 // Minimal music-theory helpers — scale degree → frequency, plus the shared
-// pitch-behavior vocabulary from prototype.md §7 (fixed / random / up / down /
+// pitch-behavior vocabulary (fixed / random / up / down /
 // positional), reused for both single notes and pad chords.
 
 export const SCALES = {
@@ -106,7 +106,7 @@ export function quantizeToScale(mode, semitone) {
 
 /**
  * Piano's traversal over a hand-picked, unordered set of chromatic
- * semitone-offsets-from-root (prototype.md/handoff.md's piano note-picker) —
+ * semitone-offsets-from-root (the piano note-picker) —
  * a genuinely different shape from `resolvePitchDegree`'s cursor, since
  * bounce (`updown`/`downup`) needs to remember which way it was heading and
  * wrap (`up`/`down`) doesn't. `cursorHolder` is whichever sound-shaped object
