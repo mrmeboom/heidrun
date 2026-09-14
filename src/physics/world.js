@@ -1,6 +1,6 @@
 // Matter.js engine/world setup — Matter is loaded globally via CDN script tag
-// in index.html (same pattern as input.html), not an npm import, per the
-// no-build-step decision in architecture.md §11.
+// in index.html, not an npm import, per the no-build-step decision in
+// architecture.md §11.
 //
 // Stepped manually from main.js's own rAF loop (Engine.update) rather than
 // Matter's own Runner — that's what gives the pause button a single, simple

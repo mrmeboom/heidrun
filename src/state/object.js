@@ -197,8 +197,7 @@ export function createSpawnModule(overrides = {}) {
  *   axis. 'random' just reuses the existing 'random' pitchBehavior as-is, re-rolled per hit.
  * Peg count is never stored — it's re-derived from spacing + the object's own
  * width/height every time either changes (architecture.md's "derived data is
- * always safe to throw away and rebuild from state", same as input.html's
- * rebuildPegs()).
+ * always safe to throw away and rebuild from state").
  */
 function createFieldModule(overrides = {}) {
   return { spacing: 80, pegRadius: 10, sound: null, pitchMode: 'up', ...overrides };

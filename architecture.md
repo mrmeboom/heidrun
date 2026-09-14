@@ -214,7 +214,7 @@ src/
     theory.js                 — scales, note/octave → MIDI, pitch-degree
                               resolution, piano note-set traversal/quantization
     voices/                    — kick.js, snare.js, hats.js, bass.js, pad.js,
-                              melody.js
+                              melody.js, noise.js (shared noise-buffer helper)
     scheduleNote.js            — shared "play this now-ish" scheduling helper
   generators/
     index.js                   — createGenerator(type, config) factory (§3)
@@ -228,9 +228,6 @@ src/
                               connect/disconnect, channel lanes, calibration
     routing.js                    — per-object routing, voice-stealing/glide,
                               gate/adsr scheduling, audiosignal voice
-    sync.js                       — ConstantSourceNode lifecycle per routing
-                              line, forces gate low / holds pitch on pause,
-                              object delete, or undo/redo
   render/
     draw.js                       — per-frame canvas 2D draw, camera transform
     camera.js                      — pan/zoom view state + fixed WORLD bounds

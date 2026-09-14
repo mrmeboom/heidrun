@@ -1,6 +1,5 @@
-// Copy-to-clipboard / paste-to-load JSON, same pattern as input.html's "copy
-// settings JSON" — for backup, moving a layout between machines, or sharing
-// a layout.
+// Copy-to-clipboard / paste-to-load JSON — for backup, moving a layout
+// between machines, or sharing a layout.
 import { serialize, deserialize } from '../state/canvasState.js';
 
 export function exportJSON() {
