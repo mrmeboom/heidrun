@@ -192,9 +192,6 @@ Clock ticks run on their own cadence, still driven by the same loop rather than 
 
 ```
 index.html                — entry point: canvas markup, imports main.js
-test.html                 — standalone ES-9 CV/gate test rig, reference for
-                             the low-level device-connection/CV-scheduling
-                             mechanics es9/context.js generalizes
 src/
   main.js                 — wires everything together, owns the frame loop
   state/

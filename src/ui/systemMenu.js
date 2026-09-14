@@ -408,8 +408,7 @@ let es9DeviceOptions = [];
 
 /**
  * ES-9 connect + routing overview. Connection is a
- * user-gesture-gated flow (scan → pick device → connect), same shape as the
- * recovered test.html rig, opened on its own dedicated AudioContext
+ * user-gesture-gated flow (scan → pick device → connect), opened on its own dedicated AudioContext
  * (es9/context.js) — entirely separate from the app's normal listening
  * context. The "x/8 channels patched" readout reads every object's routing
  * lines fresh each render (es9/routing.js's patchedChannelSummary), so it's

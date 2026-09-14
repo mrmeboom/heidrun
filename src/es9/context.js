@@ -1,8 +1,7 @@
 // Dedicated AudioContext for ES-9 hardware output — kept entirely separate
 // from audio/context.js's normal-listening context — two separate contexts,
 // decided over a single shared one so disconnecting/muting the ES-9 side
-// never touches what you hear on your own speakers. Mirrors test.html's
-// test-rig approach: a
+// never touches what you hear on your own speakers. A
 // ChannelMergerNode routed to a chosen output device via setSinkId, with
 // pitch/gate/adsr as ConstantSourceNode DC offsets. Of the ES-9's 16 device
 // channels only 8 (its DC-coupled 3.5mm Eurorack jacks, device channels
